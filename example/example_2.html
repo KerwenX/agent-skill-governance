@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智能助手 - 技能冲突检查</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=PingFang+SC:wght@400;500;600;700&display=swap');
+        body { font-family: 'PingFang SC', -apple-system, sans-serif; background-color: #f7f9fc; -webkit-tap-highlight-color: transparent; }
+        .spinner { border-top-color: #4f46e5; border-left-color: #4f46e5; }
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .sticky-bottom { position: fixed; bottom: 0; left: 0; right: 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body class="text-gray-800 pb-24">
+
+    <header class="bg-white border-b border-gray-100 px-4 py-3 sticky top-0 z-50 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></div>
+            <h1 class="text-base font-bold text-gray-900">Skill 动态冲突检测</h1>
+        </div>
+        <span class="text-xs bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full font-medium">用户运行态</span>
+    </header>
+
+    <main class="p-4 space-y-4 max-w-md mx-auto">
+        
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <div class="flex items-start justify-between mb-3">
+                <div>
+                    <span class="text-xs text-gray-400 block mb-0.5">准备启用的技能</span>
+                    <h2 class="text-lg font-bold text-gray-900 font-mono">smart-doc-summarizer</h2>
+                    <p class="text-xs text-gray-500 mt-1">中文名：智能文档总结器</p>
+                </div>
+                <span class="bg-amber-50 text-amber-600 text-xs px-2 py-1 rounded font-medium">待验证</span>
+            </div>
+            
+            <details class="group border-t border-gray-100 pt-3">
+                <summary class="flex justify-between items-center text-xs text-indigo-600 font-medium cursor-pointer list-none">
+                    <span>查看技能定义与元数据 (Metadata)</span>
+                    <svg class="w-4 h-4 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </summary>
+                <div class="mt-2 bg-gray-950 text-emerald-400 p-3 rounded-xl font-mono text-[11px] leading-relaxed overflow-x-auto">
+{
+  "id": "smart-doc-summarizer",
+  "intent": ["summarize_document", "extract_key_points"],
+  "resources": ["Local_Document_Cache"],
+  "api_mcp": ["mcp.document.analyzer", "mcp.llm.chat"],
+  "permissions": ["read:user_files"],
+  "env_dependencies": ["runtime.python.llm-tier1"]
+}
+                </div>
+            </details>
+        </div>
+
+        <div class="bg-gray-100 rounded-xl p-3 flex justify-between items-center text-xs text-gray-600">
+            <span>当前系统已加载环境技能库</span>
+            <span class="font-bold text-gray-900 bg-white px-2 py-0.5 rounded shadow-sm">56 个核心技能</span>
+        </div>
+
+        <button id="btn-detect" class="w-full bg-indigo-600 active:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            开始动态扫描与冲突交叉测试
+        </button>
+
+        <div id="loading-panel" class="hidden bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
+            <div class="inline-block w-7 h-7 border-3 border-solid border-gray-200 rounded-full animate-spin spinner mb-2.5"></div>
+            <p class="text-xs font-semibold text-gray-700" id="loading-text">正在提取交叉候选集 (7个高关联技能)...</p>
+            <p class="text-[10px] text-gray-400 mt-1">执行意图拓扑/时序及MCP接口碰撞分析...</p>
+        </div>
+
+        <div id="results-panel" class="hidden space-y-4">
+            
+            <div class="bg-red-50/60 border border-red-100 rounded-2xl p-4 fade-in">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-red-700">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <h3 class="font-bold text-sm">冲突检测报告 (7选3风险)</h3>
+                    </div>
+                    <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">高风险 x3</span>
+                </div>
+                <p class="text-xs text-gray-600 mt-2 leading-relaxed">
+                    在从候选集（<span class="font-mono text-xs text-gray-700">doc-reader, doc-generate, deep-research...</span>）等技能中交叉比对，发现以下3处并发阻断型冲突：
+                </p>
+            </div>
+
+            <div class="space-y-3 fade-in">
+                <div class="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-l-purple-500 border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-mono font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">doc-reader</span>
+                        <span class="bg-purple-50 text-purple-700 text-[10px] font-medium px-2 py-0.5 rounded">意图冲突 (Intent)</span>
+                    </div>
+                    <div class="mt-2.5 space-y-1">
+                        <p class="text-xs font-semibold text-gray-500">场景描述：</p>
+                        <p class="text-xs text-gray-600 leading-relaxed bg-gray-50 p-2 rounded-lg">
+                            用户发出“帮我看一下这个文档”时，两个技能的 <code class="bg-gray-200/60 px-1 rounded text-[11px]">Description</code> 语义相似度达 0.91。LLM大模型在分发路由时极易产生摇摆、单向覆盖或双重触发。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-l-orange-500 border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-mono font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">doc-processing</span>
+                        <span class="bg-orange-50 text-orange-700 text-[10px] font-medium px-2 py-0.5 rounded">资源与权限冲突</span>
+                    </div>
+                    <div class="mt-2.5 space-y-1">
+                        <p class="text-xs font-semibold text-gray-500">场景描述：</p>
+                        <p class="text-xs text-gray-600 leading-relaxed bg-gray-50 p-2 rounded-lg">
+                            两技能同时对 <code class="bg-gray-200/60 px-1 rounded text-[11px]">Local_Document_Cache</code> 进行独占式写入。在用户执行批量总结时，容易导致底层高并发文件句柄死锁与执行权限被拒。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-l-yellow-500 border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-mono font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">deep-research</span>
+                        <span class="bg-yellow-50 text-yellow-700 text-[10px] font-medium px-2 py-0.5 rounded">环境与时序冲突</span>
+                    </div>
+                    <div class="mt-2.5 space-y-1">
+                        <p class="text-xs font-semibold text-gray-500">场景描述：</p>
+                        <p class="text-xs text-gray-600 leading-relaxed bg-gray-50 p-2 rounded-lg">
+                            两者高频共享 <code class="bg-gray-200/60 px-1 rounded text-[11px]">runtime.python.llm-tier1</code> 运行沙箱，若在相近时序内触发，将触发基础大模型底层MCP接口的频率限制（Rate Limit Overload）。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-green-200 fade-in" style="animation-delay: 0.15s;">
+                <div class="border-b border-gray-100 pb-2.5 mb-3">
+                    <h3 class="font-bold text-sm text-green-700 flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        智能调优与解决策略 (Resolution)
+                    </h3>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="bg-green-50/40 p-3 rounded-xl border border-green-100/60">
+                        <span class="text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded float-right">建议采纳</span>
+                        <h4 class="text-xs font-bold text-gray-800">1. 语义解耦（针对意图冲突）</h4>
+                        <p class="text-xs text-gray-600 mt-1">系统已通过大模型重新生成并收窄、优化了 `smart-doc-summarizer` 的 description 内容，增强互斥性：</p>
+                        <div class="mt-2 bg-white p-2 rounded-lg border border-gray-100 text-[11px] text-indigo-600 italic">
+                            "专门针对长文本或多PDF文件进行精简、核心要点提炼与摘要生成的智能工具。不执行全文通读与非结构化基础解析。"
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-xl space-y-2">
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-800">2. 资源动态隔离 (针对 doc-processing)</h4>
+                            <p class="text-xs text-gray-500 mt-0.5 leading-relaxed">对新技能注入流式排队中间件，限制独占写权限，转为异步多级缓冲区写入。</p>
+                        </div>
+                        <hr class="border-gray-200/60">
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-800">3. 时序动态抖动 (针对 deep-research)</h4>
+                            <p class="text-xs text-gray-500 mt-0.5 leading-relaxed">在并发调用底层MCP大模型接口时，对新技能强制加入 150ms 随机微时序抖动，避开并发洪峰。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="sticky-action" class="hidden sticky-bottom bg-white border-t border-gray-100 p-4 z-50 max-w-md mx-auto fade-in">
+        <button class="w-full bg-emerald-600 active:bg-emerald-700 text-white font-medium py-3 px-4 rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            一键应用调优策略并使用技能
+        </button>
+    </div>
+
+    <script>
+        document.getElementById('btn-detect').addEventListener('click', function() {
+            const btn = this;
+            const loadingPanel = document.getElementById('loading-panel');
+            const resultsPanel = document.getElementById('results-panel');
+            const stickyAction = document.getElementById('sticky-action');
+            const loadingText = document.getElementById('loading-text');
+            
+            // 状态重置与禁用激活
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'bg-gray-400');
+            resultsPanel.classList.add('hidden');
+            stickyAction.classList.add('hidden');
+            loadingPanel.classList.remove('hidden');
+
+            setTimeout(() => { loadingText.innerText = "正在计算语义空间距离 (Description Embeddings)..."; }, 500);
+            setTimeout(() => { loadingText.innerText = "正在构建 MCP API / 运行沙箱依赖拓扑图..."; }, 1100);
+
+            // 渲染结果
+            setTimeout(() => {
+                loadingPanel.classList.add('hidden');
+                resultsPanel.classList.remove('hidden');
+                stickyAction.classList.remove('hidden');
+                
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'bg-gray-400');
+                loadingText.innerText = "正在提取交叉候选集 (7个高关联技能)...";
+                
+                resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 1800);
+        });
+    </script>
+</body>
+</html>

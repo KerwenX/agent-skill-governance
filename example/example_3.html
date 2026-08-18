@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智能助手 - 技能冲突检查</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=PingFang+SC:wght@400;500;600;700&display=swap');
+        body { font-family: 'PingFang SC', -apple-system, sans-serif; background-color: #f7f9fc; -webkit-tap-highlight-color: transparent; }
+        .spinner { border-top-color: #4f46e5; border-left-color: #4f46e5; }
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .sticky-bottom { position: fixed; bottom: 0; left: 0; right: 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body class="text-gray-800 pb-24">
+
+    <header class="bg-white border-b border-gray-100 px-4 py-3 sticky top-0 z-50 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></div>
+            <h1 class="text-base font-bold text-gray-900">Skill 动态冲突检测</h1>
+        </div>
+        <span class="text-xs bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full font-medium">用户运行态</span>
+    </header>
+
+    <main class="p-4 space-y-4 max-w-md mx-auto">
+        
+        <!-- 新技能元数据展示 -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <div class="flex items-start justify-between mb-3">
+                <div>
+                    <span class="text-xs text-gray-400 block mb-0.5">准备启用的技能</span>
+                    <h2 class="text-lg font-bold text-gray-900 font-mono">portfolio-analyzer-skill</h2>
+                    <p class="text-xs text-gray-500 mt-1">中文名：投资组合深度分析</p>
+                </div>
+                <span class="bg-amber-50 text-amber-600 text-xs px-2 py-1 rounded font-medium">待验证</span>
+            </div>
+            
+            <details class="group border-t border-gray-100 pt-3">
+                <summary class="flex justify-between items-center text-xs text-indigo-600 font-medium cursor-pointer list-none">
+                    <span>查看技能定义与元数据 (Metadata)</span>
+                    <svg class="w-4 h-4 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </summary>
+                <div class="mt-2 bg-gray-950 text-emerald-400 p-3 rounded-xl font-mono text-[11px] leading-relaxed overflow-x-auto">
+{
+  "id": "portfolio-analyzer-skill",
+  "intent": ["analyze_portfolio", "calculate_roi", "query_stock_data"],
+  "resources": ["User_Financial_Ledger", "Bank_Account_DB"],
+  "api_mcp": ["mcp.finance.market_data", "mcp.llm.reasoning"],
+  "permissions": ["read:financial_records", "read:real_time_market"],
+  "env_dependencies": ["runtime.python.data-science-tier"]
+}
+                </div>
+            </details>
+        </div>
+
+        <div class="bg-gray-100 rounded-xl p-3 flex justify-between items-center text-xs text-gray-600">
+            <span>当前系统已加载环境技能库</span>
+            <span class="font-bold text-gray-900 bg-white px-2 py-0.5 rounded shadow-sm">56 个核心技能</span>
+        </div>
+
+        <button id="btn-detect" class="w-full bg-indigo-600 active:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            开始动态扫描与冲突交叉测试
+        </button>
+
+        <!-- 加载状态 -->
+        <div id="loading-panel" class="hidden bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
+            <div class="inline-block w-7 h-7 border-3 border-solid border-gray-200 rounded-full animate-spin spinner mb-2.5"></div>
+            <p class="text-xs font-semibold text-gray-700" id="loading-text">正在提取交叉候选集 (3个高关联技能)...</p>
+            <p class="text-[10px] text-gray-400 mt-1">执行金融数据读写锁/MCP接口碰撞分析...</p>
+        </div>
+
+        <!-- 结果面板 -->
+        <div id="results-panel" class="hidden space-y-4">
+            
+            <div class="bg-red-50/60 border border-red-100 rounded-2xl p-4 fade-in">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-red-700">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <h3 class="font-bold text-sm">冲突检测报告 (3处风险)</h3>
+                    </div>
+                    <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">高风险 x3</span>
+                </div>
+                <p class="text-xs text-gray-600 mt-2 leading-relaxed">
+                    在从候选集（<span class="font-mono text-xs text-gray-700">stock-indices-query, bank-account-sync, stock-price-query</span>）中交叉比对，发现以下并发阻断型冲突：
+                </p>
+            </div>
+
+            <div class="space-y-3 fade-in">
+                <!-- 冲突1：意图冲突 -->
+                <div class="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-l-purple-500 border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-mono font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">stock-indices-query</span>
+                        <span class="bg-purple-50 text-purple-700 text-[10px] font-medium px-2 py-0.5 rounded">意图冲突 (Intent)</span>
+                    </div>
+                    <div class="mt-2.5 space-y-1">
+                        <p class="text-xs font-semibold text-gray-500">场景描述：</p>
+                        <p class="text-xs text-gray-600 leading-relaxed bg-gray-50 p-2 rounded-lg">
+                            用户发出“分析一下我的股票和当前行情”时，两者的 <code class="bg-gray-200/60 px-1 rounded text-[11px]">Description</code> 在“股票”、“行情”等关键词语义重叠度达 0.88。大模型在路由时极易产生摇摆，可能错误拉起大盘指数查询而忽略用户的个人持仓深度分析需求。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 冲突2：状态锁阻塞 -->
+                <div class="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-l-orange-500 border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-mono font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">bank-account-sync</span>
+                        <span class="bg-orange-50 text-orange-700 text-[10px] font-medium px-2 py-0.5 rounded">生命周期与状态锁阻塞</span>
+                    </div>
+                    <div class="mt-2.5 space-y-1">
+                        <p class="text-xs font-semibold text-gray-500">场景描述：</p>
+                        <p class="text-xs text-gray-600 leading-relaxed bg-gray-50 p-2 rounded-lg">
+                            两技能均需访问 <code class="bg-gray-200/60 px-1 rounded text-[11px]">Bank_Account_DB</code>。当网银账单同步技能正在执行底层写入（事务锁定）时，深度分析技能发起的并发大批量读取，会导致数据库触发防脏读机制，产生级联等待与死锁循环。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 冲突3：MCP接口冲突 -->
+                <div class="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-l-yellow-500 border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-mono font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">stock-price-query</span>
+                        <span class="bg-yellow-50 text-yellow-700 text-[10px] font-medium px-2 py-0.5 rounded">目标MCP接口冲突</span>
+                    </div>
+                    <div class="mt-2.5 space-y-1">
+                        <p class="text-xs font-semibold text-gray-500">场景描述：</p>
+                        <p class="text-xs text-gray-600 leading-relaxed bg-gray-50 p-2 rounded-lg">
+                            共同依赖 <code class="bg-gray-200/60 px-1 rounded text-[11px]">mcp.finance.market_data</code>。深度分析技能在进行批量持仓回溯时，会瞬间发起大量请求，极易耗尽实时行情API的并发配额（Rate Limit），导致实时查价技能被熔断拒绝服务。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 解决报告 -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-green-200 fade-in" style="animation-delay: 0.15s;">
+                <div class="border-b border-gray-100 pb-2.5 mb-3">
+                    <h3 class="font-bold text-sm text-green-700 flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        智能调优与冲突解决策略 (Resolution)
+                    </h3>
+                </div>
+
+                <div class="space-y-3">
+                    <!-- 解决意图冲突：Description 优化 -->
+                    <div class="bg-green-50/40 p-3 rounded-xl border border-green-100/60">
+                        <span class="text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded float-right">建议采纳</span>
+                        <h4 class="text-xs font-bold text-gray-800">1. 语义解耦（针对意图冲突）</h4>
+                        <p class="text-xs text-gray-600 mt-1">系统已通过大模型重新生成并收窄了 `portfolio-analyzer-skill` 的 description 内容，增强与大盘/查价技能的互斥性：</p>
+                        <div class="mt-2 bg-white p-2 rounded-lg border border-gray-100 text-[11px] text-indigo-600 italic">
+                            "专注于个人多资产投资组合的收益率计算、风险回撤评估与深度财务建模。注意：不用于查询单一股票实时价格，也不用于查询大盘基础指数行情。"
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-xl space-y-2">
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-800">2. 资源锁降级与事件级联 (针对 bank-account-sync)</h4>
+                            <p class="text-xs text-gray-500 mt-0.5 leading-relaxed">注入状态机拦截器，将新技能的读取权限降级为只读快照 (Snapshot Isolation)。或建立事件依赖，强制要求新技能在 `bank_sync_completed` 事件触发后才能执行。</p>
+                        </div>
+                        <hr class="border-gray-200/60">
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-800">3. MCP接口流量隔离 (针对 stock-price-query)</h4>
+                            <p class="text-xs text-gray-500 mt-0.5 leading-relaxed">实施 API QoS（服务质量）分级。将深度分析技能的行情请求路由至“延迟15分钟的行情缓存池”，保障实时查价技能享有最高并发优先级。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="sticky-action" class="hidden sticky-bottom bg-white border-t border-gray-100 p-4 z-50 max-w-md mx-auto fade-in">
+        <button class="w-full bg-emerald-600 active:bg-emerald-700 text-white font-medium py-3 px-4 rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            一键应用调优策略并启用技能
+        </button>
+    </div>
+
+    <script>
+        document.getElementById('btn-detect').addEventListener('click', function() {
+            const btn = this;
+            const loadingPanel = document.getElementById('loading-panel');
+            const resultsPanel = document.getElementById('results-panel');
+            const stickyAction = document.getElementById('sticky-action');
+            const loadingText = document.getElementById('loading-text');
+            
+            // 状态重置与禁用激活
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'bg-gray-400');
+            resultsPanel.classList.add('hidden');
+            stickyAction.classList.add('hidden');
+            loadingPanel.classList.remove('hidden');
+
+            setTimeout(() => { loadingText.innerText = "正在计算语义空间距离 (Description Embeddings)..."; }, 500);
+            setTimeout(() => { loadingText.innerText = "正在构建 数据库锁 / MCP API 依赖拓扑图..."; }, 1100);
+
+            // 渲染结果
+            setTimeout(() => {
+                loadingPanel.classList.add('hidden');
+                resultsPanel.classList.remove('hidden');
+                stickyAction.classList.remove('hidden');
+                
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'bg-gray-400');
+                loadingText.innerText = "正在提取交叉候选集 (3个高关联技能)...";
+                
+                resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 1800);
+        });
+    </script>
+</body>
+</html>

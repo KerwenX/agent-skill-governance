@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+    font-family: 'Inter', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    color: #1e293b;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    background:
+        radial-gradient(1200px 600px at 15% -10%, rgba(99,102,241,.14), transparent 60%),
+        radial-gradient(1000px 500px at 85% 110%, rgba(16,185,129,.12), transparent 60%),
+        linear-gradient(160deg, #eef2f9 0%, #f6f8fc 45%, #e9eef8 100%);
+}
+.mono { font-family: 'SFMono-Regular', 'JetBrains Mono', Consolas, monospace; }
+
+/* 4:3 舞台 */
+.stage {
+    width: min(94vw, calc(92vh * 4 / 3));
+    aspect-ratio: 4 / 3;
+    background: #ffffff;
+    border-radius: 22px;
+    box-shadow: 0 30px 80px -20px rgba(30,41,59,.35), 0 0 0 1px rgba(148,163,184,.15);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* 通用动画 */
+.fade-in { animation: fadeIn .4s cubic-bezier(0.4,0,0.2,1) both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.pop-in { animation: popIn .28s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+.slide-in { animation: slideIn .35s cubic-bezier(.4,0,.2,1) both; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+
+/* 方向提示 */
+.dir-in { animation: dirIn .9s cubic-bezier(.4,0,.2,1) both; }
+@keyframes dirIn { 0% { opacity: 0; transform: scale(.85); } 20% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1.03); } }
+
+/* 运行逐段 */
+.stage-item { transition: opacity .3s ease, transform .3s ease; }
+.stage-hidden { opacity: 0; transform: translateY(8px); }
+.run-pulse { animation: runPulse .5s ease-in-out 3; }
+@keyframes runPulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+.route-flicker { animation: routeFlicker .6s ease-in-out 3; }
+@keyframes routeFlicker { 0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } 50% { box-shadow: 0 0 0 6px rgba(245,158,11,.25); } }
+
+/* 图表条 */
+.bar-grow { animation: barGrow .7s cubic-bezier(.4,0,.2,1) both; transform-origin: left; }
+@keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* 生命周期状态机 */
+.life-dot { transition: all .3s ease; }
+.life-dot.on { box-shadow: 0 0 0 5px rgba(99,102,241,.18); }
+
+/* 关系图 */
+.rel-node { cursor: pointer; transition: all .2s ease; }
+.rel-node:hover { transform: translateY(-2px); }
+.rel-node.highlight { filter: drop-shadow(0 0 6px rgba(99,102,241,.5)); }
+.rel-edge { transition: stroke .2s ease, stroke-width .2s ease; }
+
+/* 滚动条 */
+.scroll-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+.scroll-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.scroll-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* 可点击 */
+.hit { cursor: pointer; transition: all .18s ease; }
+.hit:hover { transform: translateY(-1px); box-shadow: 0 6px 18px -6px rgba(30,41,59,.18); }
+.hit:active { transform: scale(.975); }
+.press { transition: transform .12s ease; }
+.press:active { transform: scale(.95); }
+
+/* 子 tab */
+.subtab { transition: all .18s ease; cursor: pointer; }
+.subtab:hover { color: #4f46e5; }
+.subtab.active { color: #4f46e5; background: #eef2ff; }
+
+/* 抽屉 */
+.drawer { transition: transform .32s cubic-bezier(.4,0,.2,1); }
+
+/* 开关 */
+.toggle { transition: background .2s ease; }
+
+/* 视图切换 */
+.view-fade { animation: viewFade .3s cubic-bezier(.4,0,.2,1) both; }
+@keyframes viewFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+}
