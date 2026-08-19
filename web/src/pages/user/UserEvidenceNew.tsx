@@ -102,7 +102,7 @@ export default function UserEvidenceNew() {
       eventId: nextId("evt"), eventType: "LOCAL_EVIDENCE_CREATED",
       timestamp: Date.now(), sourceDomain: "USER", sourceId: eventBus.id,
       targetDomain: "ALL", correlationId: nextId("corr"),
-      globalVersion: s.globalVersion, payload: { evidenceId: final证据.id, 证据: final证据 },
+      globalVersion: s.globalVersion, payload: { evidenceId: final证据.id, evidence: final证据 },
     } as GovernanceEvent);
 
     await orchestrator.wait(500);

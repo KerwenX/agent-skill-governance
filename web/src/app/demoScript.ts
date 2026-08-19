@@ -232,6 +232,9 @@ export const DEMO_SCRIPT: DemoStep[] = [
 
 export function sendCommand(target: Target, command: DemoStep["command"]) {
   if (!command) return;
+  // Handlers filter on payload.userId — carry the full window id ("user-a", …),
+  // otherwise every window executes every command.
+  const userId = target.startsWith("user-") ? target : undefined;
   const event: GovernanceEvent = {
     eventId: nextId("evt"),
     eventType: "DEMO_COMMAND",
@@ -242,7 +245,7 @@ export function sendCommand(target: Target, command: DemoStep["command"]) {
     targetIds: target === "all" ? undefined : [target],
     correlationId: nextId("corr"),
     globalVersion: "v18",
-    payload: command,
+    payload: userId ? { ...command, userId } : command,
   };
   eventBus.publish(event);
 }

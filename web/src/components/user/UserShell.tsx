@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
 import { useGovernance } from "../../store/governance";
 import { useUserRevalidation } from "../../hooks/useUserRevalidation";
+import { eventBus } from "../../app/eventBus";
 import { Icon, IconName } from "../common/Icons";
 
 export default function UserShell() {
@@ -17,6 +18,17 @@ export default function UserShell() {
 
   React.useEffect(() => { if (userId) init("user", userId); }, [init, userId]);
   useUserRevalidation();
+
+  // Demo command: navigate this user window (outcome / closure steps)
+  React.useEffect(() => {
+    return eventBus.subscribe(event => {
+      if (event.eventType !== "DEMO_COMMAND") return;
+      if (event.targetDomain !== "USER") return; // developer-targeted commands
+      const { action, to, userId: target } = event.payload as { action: string; to?: string; userId?: string };
+      if (target && target !== userId) return;
+      if (action === "navigate" && to) navigate(to);
+    });
+  }, [navigate, userId]);
 
   // Auto-collapse on narrow windows (e.g. 520px demo popups)
   React.useEffect(() => {

@@ -100,17 +100,19 @@ export function useDevDemoCommands() {
           s.addChangeSet(cs);
           s.upsertCandidate({ ...cand, state: "PUBLISHED", publishedContractId: contract.id });
 
-          s.emit({
-            eventId: nextId("evt"), eventType: "GLOBAL_CONTRACT_PUBLISHED",
-            timestamp: Date.now(), sourceDomain: "DEVELOPER", sourceId: eventBus.id,
-            targetDomain: "ALL", correlationId: nextId("corr"),
-            globalVersion: toVer, payload: { changeSetId: cs.id },
-          } as GovernanceEvent);
+          // ChangeSet must arrive BEFORE the publish event: other windows look up
+          // changeSets[changeSetId] when applying GLOBAL_CONTRACT_PUBLISHED.
           s.emit({
             eventId: nextId("evt"), eventType: "GLOBAL_CHANGESET_CREATED",
             timestamp: Date.now(), sourceDomain: "DEVELOPER", sourceId: eventBus.id,
             targetDomain: "ALL", correlationId: nextId("corr"),
             globalVersion: toVer, payload: { changeSet: cs, globalContract: contract },
+          } as GovernanceEvent);
+          s.emit({
+            eventId: nextId("evt"), eventType: "GLOBAL_CONTRACT_PUBLISHED",
+            timestamp: Date.now(), sourceDomain: "DEVELOPER", sourceId: eventBus.id,
+            targetDomain: "ALL", correlationId: nextId("corr"),
+            globalVersion: toVer, payload: { changeSetId: cs.id },
           } as GovernanceEvent);
 
           navigate(`/developer/propagation/${cs.id}`);

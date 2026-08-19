@@ -56,6 +56,12 @@ def main():
         })();""")
 
         launcher = ctx.new_page()
+        errors: dict[str, list[str]] = {}
+        def watch(pg):
+            errors[pg.url] = []
+            pg.on("pageerror", lambda e, u=pg.url: errors.setdefault(u, []).append(str(e)[:400]))
+        watch(launcher)
+        ctx.on("page", watch)
         launcher.goto(f"{BASE}/demo")
         launcher.wait_for_timeout(1500)
         launcher.screenshot(path=str(OUT / "00-launcher.png"))
@@ -131,10 +137,11 @@ def main():
             png = f"{n:02d}-{sid}.png"
             pg.screenshot(path=str(OUT / png))
             try:
-                txt = pg.inner_text("body", timeout=1000)[:120].replace("\n", " / ")
+                (OUT / f"{n:02d}-{sid}.txt").write_text(pg.inner_text("body", timeout=1000), encoding="utf-8")
             except Exception:
-                txt = "<no text>"
-            log(f"{png} — 步骤 {n}/{len(STEPS)} ({focus}) url={pg.url} text={txt}")
+                pass
+            pm = page_map()
+            log(f"{png} — 步骤 {n}/{len(STEPS)} ({focus}) url={pg.url} map={{{','.join(f'{k}:{v.url[:60]}' for k, v in pm.items())}}}")
             captures.append((n, sid, focus, png, narration, note))
             log(f"{png} — 步骤 {n}/{len(STEPS)} ({focus})")
 
@@ -142,6 +149,9 @@ def main():
         time.sleep(1.5)
         launcher.screenshot(path=str(OUT / f"{len(STEPS)+1:02d}-launcher-end.png"))
         log("done")
+        for u, errs in errors.items():
+            if errs:
+                log(f"PAGEERROR[{u}]: " + " | ".join(errs[:3]))
 
     # ---------- markdown doc ----------
     ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
