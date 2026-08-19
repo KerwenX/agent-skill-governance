@@ -1,0 +1,123 @@
+林
+
+林 · 分析师
+
+EQUITY RESEARCH ANALYST
+
+智能体工作台
+我的治理规则
+治理更新
+历史记录
+
+全局基准版本
+
+v19
+
+收起侧栏
+
+智能体工作台 · agent-user-a
+
+模型 fabric-model-4 · 全局基准 v19全局优先规则已生效
+
+运行轨迹
+查一下英伟达最新的官方季度财报（10-Q）
+已提取上下文：任务类型=official_filing，来源要求=official
+选中技能：Investor Relations Search（综合得分 1.00）
+正在执行 Investor Relations Search…
+✓ 已返回官方来源：investor.nvidia.com。
+上下文：
+taskType=
+official_filing
+sourceRequirement=
+official
+agentId=
+agent-user-a
+userId=
+user-a
+
+候选技能
+
+Web Search
+
+Global GC-106: -0.20 (deprioritized)
+
+0.61
+
+规划 0.81 -0.20
+
+为何？
+
+Investor Relations Search
+
+Global GC-106: +0.22
+
+1.00
+
+规划 0.78 +0.22
+
+为何？
+检查全局治理规则…
+检查本地治理规则…
+命中全局优先规则：IRSearch > WebSearch
+
+结果来源
+
+NVIDIA Q3 FY2025 季度财报（10-Q）
+investor.nvidia.com
+官方
+NVIDIA 投资者关系 - 财务文档
+investor.nvidia.com
+官方
+发送
+查一下英伟达最新的官方季度财报（10-Q）
+找苹果投资者关系页面最新的 10-Q 公告
+把这份扫描版 Q2 财报 PDF 解析出来
+治理检查器
+
+Effective = 全局 ∧ 本地细化
+
+上下文
+
+任务类型
+official_filing
+来源要求
+official
+智能体
+agent-user-a
+
+全局治理
+
+不变量
+
+Internal Finance requires Finance permission
+
+GC-1000 · v12
+
+默认规则
+
+Realtime quote overrides cache
+
+GC-1014 · v15
+
+默认规则
+
+Official filing: IRSearch > WebSearch
+
+GC-106 · v18
+
+本地治理（0）
+
+暂无本地规则，运行证据将沉淀为本地规则。
+
+生效结果
+
+Investor Relations Search
+1.00
+Web Search
+0.61
+
+Global Governance v18 → v19
+
+3 local contracts affected
+
+Review →

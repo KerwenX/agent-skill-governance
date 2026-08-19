@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-"""Capture the full guided demo (25 steps) into screenshots + a review markdown doc.
+"""Capture the full guided demo (25 steps) into screenshots + markdown docs.
 
-Usage: python scripts/capture_demo.py   (dev server must be running on :5173)
-Output: web/screenshots/demo/NN-<step>.png  and  web/DEMO-完整演示文档.md
+Usage:
+  python scripts/capture_demo.py               # internal QA review doc (DEMO-Review.md)
+  DEMO_MODE=presentation python scripts/capture_demo.py   # external whitepaper (DEMO-Whitepaper.md)
+
+Dev server must be running on :5173. In presentation mode the orchestration
+console (Launcher) is never captured — only User/Developer business views.
 """
-import sys, time, datetime
+import sys, time, os, datetime
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 BASE = "http://localhost:5173"
 OUT = Path(__file__).resolve().parent.parent / "screenshots" / "demo"
-DOC = Path(__file__).resolve().parent.parent / "DEMO-完整演示文档.md"
+MODE = os.environ.get("DEMO_MODE", "review")  # review | presentation
+DOC = Path(__file__).resolve().parent.parent / ("DEMO-Review.md" if MODE == "review" else "DEMO-Whitepaper.md")
+CONSOLE_STEPS = {"intro", "end"}  # launcher-focused steps — never captured in presentation mode
 
 # (id, focus, wait_ms, narration, 看点) — mirrors web/src/app/demoScript.ts
 STEPS = [
@@ -64,8 +70,9 @@ def main():
         ctx.on("page", watch)
         launcher.goto(f"{BASE}/demo")
         launcher.wait_for_timeout(1500)
-        launcher.screenshot(path=str(OUT / "00-launcher.png"))
-        log("00-launcher.png — 演示台初始状态")
+        if MODE == "review":
+            launcher.screenshot(path=str(OUT / "00-launcher.png"))
+            log("00-launcher.png — 演示台初始状态")
 
         launcher.get_by_role("button", name="开始演示").click()
         log("已点击「开始演示」，等待 4 个窗口打开…")
@@ -101,8 +108,14 @@ def main():
             pm[name].screenshot(path=str(OUT / f"01-{name}-initial.png"))
         log("01-*.png — 四个窗口初始状态")
 
+        if MODE == "presentation":
+            log("presentation 模式：跳过编排控制台（Launcher）截图")
+
         captures = []  # (step_no, sid, focus, png, narration, note)
         for i, (sid, focus, wait, narration, note) in enumerate(STEPS):
+            if MODE == "presentation" and sid in CONSOLE_STEPS:
+                log(f"skip {sid}（Launcher 聚焦，对外模式不截图）")
+                continue
             n = i + 1
             # wait for launcher narration to show this step
             found = False
@@ -145,9 +158,10 @@ def main():
             captures.append((n, sid, focus, png, narration, note))
             log(f"{png} — 步骤 {n}/{len(STEPS)} ({focus})")
 
-        # final: launcher settled view
+        # final: launcher settled view (review mode only)
         time.sleep(1.5)
-        launcher.screenshot(path=str(OUT / f"{len(STEPS)+1:02d}-launcher-end.png"))
+        if MODE == "review":
+            launcher.screenshot(path=str(OUT / f"{len(STEPS)+1:02d}-launcher-end.png"))
         log("done")
         for u, errs in errors.items():
             if errs:
@@ -155,6 +169,15 @@ def main():
 
     # ---------- markdown doc ----------
     ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    if MODE == "review":
+        write_review(ts, captures)
+    else:
+        write_whitepaper(ts)
+    log(f"written: {DOC}")
+
+
+def write_review(ts, captures):
+    """内部 QA / 专利审查版：含编排控制台、步骤旁白与事件日志，供开发团队审阅。"""
     acts = [
         ("第一幕 · User A 遭遇问题并沉淀本地规则", 1, 5),
         ("第二幕 · B、C 遇到同样问题，三份证据汇聚", 6, 13),
@@ -163,9 +186,10 @@ def main():
         ("第五幕 · 闭环验证", 23, 24),
     ]
     lines = [
-        "# 智能体 Skill 双端协同治理系统 — 完整演示文档（自动截图）",
+        "# 智能体 Skill 双端协同治理系统 — 完整演示文档（内部审查版）",
         "",
         f"> 生成时间：{ts} ｜ 环境：Chromium 1440×900，播放速度 1× ｜ 剧本源：`src/app/demoScript.ts`（共 {len(STEPS)} 步）",
+        "> ⚠️ 本文件含编排控制台（Launcher）与事件日志，仅供内部 QA 与专利审查使用；对外演示请使用 `DEMO-Whitepaper.md`。",
         "> 截图为演示自动运行过程中各窗口的真实状态，按剧本顺序排列，可直接用于审阅。",
         "",
         "## 0. 演示启动",
@@ -213,11 +237,131 @@ def main():
         "## 附注",
         "",
         "- 截图脚本：`web/scripts/capture_demo.py`（Playwright，可重复执行）。",
+        "- 对外演示模式：`DEMO_MODE=presentation python scripts/capture_demo.py`，产出 `DEMO-Whitepaper.md`（不含编排控制台）。",
         "- 若剧本（`demoScript.ts`）调整了步骤或等待时长，重新运行脚本即可重新生成本文档。",
         "",
     ]
     DOC.write_text("\n".join(lines), encoding="utf-8")
-    log(f"written: {DOC}")
+
+
+# ---------------------------------------------------------------------------
+# 对外白皮书：以用户旅程为核心的场景化叙事，仅包含 User / Developer 业务视图
+# ---------------------------------------------------------------------------
+SCENARIOS = [
+    (
+        "场景一 · 当「官方数据」查不到：一次真实的分析师工作会话",
+        [
+            "分析师林在智能体工作台发起一项再普通不过的任务：查询英伟达最新官方季度财报（10-Q）。他的诉求很明确——**要官方来源，不要二手转述**。",
+            "智能体默认选中了通用网页搜索，返回的却是 Reuters、CNBC、Yahoo Finance 等媒体摘要。数据本身没有错，但「来源合规」这一业务约束被绕过了——这正是治理系统要解决的第一个问题。",
+        ],
+        [
+            ("02-a-run.png", "通用搜索返回媒体来源，触发「来源要求=官方」的合规告警"),
+            ("03-a-correct.png", "分析师一键修正：改用投资者关系搜索，直达 investor.nvidia.com 官方公告"),
+            ("04-a-build.png", "系统把这次人工修正自动结构化为运行证据（含上下文、技能关系、违规类型、版本依赖）"),
+            ("05-a-create-rule.png", "一条属于该分析师的本地治理规则随即生效：官方公告场景下，IR 搜索优先于通用搜索"),
+        ],
+    ),
+    (
+        "场景二 · 同一个坑，同一支团队接连踩到",
+        [
+            "同样的官方财报任务，投研助理陈与交易员周也相继触发了相同的非官方来源问题。陈的本地规则还带着个人特有条件（仅内部资源场景生效）；而周的终端网络策略屏蔽了 IR 站点，本地规则被迫强制走通用搜索，问题被进一步放大。",
+            "值得注意的是：三位分析师的修正动作彼此独立、互不知情——但**三份结构化的运行证据正在后台悄悄汇聚**，指向同一类治理缺口。",
+        ],
+        [
+            ("06-b-run.png", "第二位分析师遭遇完全相同的来源合规问题"),
+            ("07-b-correct-build.png", "陈完成修正——他的本地规则额外携带个人特有条件（internal_resource）"),
+            ("08-b-build.png", "证据被自动结构化并上行至治理侧"),
+            ("09-b-create-rule.png", "陈的本地规则建立，与林的规则各自独立运作"),
+            ("10-c-run.png", "第三位分析师受网络策略限制，本地规则与任务需求相悖"),
+            ("11-c-correct-build.png", "周完成修正，第三份独立证据产生"),
+            ("12-c-build.png", "证据结构化：违规类型、技能关系、上下文被标准化"),
+            ("13-c-create-rule.png", "周的本地规则（强制通用搜索）建立——它将在全局规则发布后与新规则正面冲突"),
+        ],
+    ),
+    (
+        "场景三 · 治理引擎自动聚合：从三份散落证据到一条全局规则",
+        [
+            "治理侧的开发者控制台此刻并不需要人工翻找。系统按「违规类型 + 技能关系 + 上下文」自动聚类三份证据：独立用户数 3、结果一致性 100%，升级评分 0.78 越过 0.75 阈值——一条全局候选规则被自动生成。",
+            "开发者所做的，只是审查这条候选规则、确认影响范围，然后发布。全局治理版本从 v18 升至 v19，规则沿「全局契约 → 技能关系 → 本地契约」的依赖链逐层传播，所有受影响方在发布瞬间被标记并进入重验证。",
+        ],
+        [
+            ("14-dev-cluster.png", "证据自动聚类：3 位独立用户、100% 结果一致性、升级评分 0.78 → PROMOTION READY"),
+            ("15-dev-candidate.png", "系统自动生成全局候选规则：官方公告场景下 IR 搜索优先"),
+            ("16-dev-approve.png", "开发者审批候选规则，进入契约编辑器"),
+            ("17-dev-impact.png", "发布前影响分析：3 个本地契约将被波及"),
+            ("18-dev-publish.png", "全局治理 v18 → v19 发布完成"),
+            ("19-dev-propagation.png", "依赖波传播监控：提交 → 依赖扫描 → 本地失效 → 重验证全链路"),
+        ],
+    ),
+    (
+        "场景四 · 升级落地：三条本地规则的三重结局",
+        [
+            "全局规则发布后，三个用户的本地规则走向了三种不同的命运——系统对每一条都给出了可解释的处理：",
+            "被全局完全覆盖的规则自动退役；保留个人特有条件（internal_resource）的规则在共享部分被吸收后继续以精化形态存在；与全局规则方向相悖的规则被标记为冲突，并进入冲突解决器由用户裁定。",
+        ],
+        [
+            ("20-outcome-a.png", "林的规则被全局规则完全覆盖 → 自动退役（RETIRED）"),
+            ("21-outcome-b.png", "陈的规则保留个人特有条件 → 精化续存（ACTIVE_REFINEMENT）"),
+            ("22-outcome-c.png", "周的规则与全局规则方向相反 → 冲突，进入冲突解决器（CONFLICT）"),
+        ],
+    ),
+    (
+        "场景五 · 闭环验证：治理如何反哺下一次运行",
+        [
+            "故事还没有结束。林再次发起完全相同的官方财报查询——这一次，全局规则在技能规划阶段就生效了：IR 搜索综合得分升至 1.00，通用搜索降至 0.61，智能体直接选中官方来源，全程零人工干预。",
+            "一条来自一线运行的人工修正，经过「证据上行 → 全局演化 → 局部消解」的治理闭环，最终变成全团队默认可用的基础设施——这就是双端协同治理的完整价值。",
+        ],
+        [
+            ("23-closure.png", "同一任务再次发起：全局规则已在规划阶段生效"),
+            ("24-closure-run.png", "IR 搜索得分 1.00 vs 通用搜索 0.61，直接返回 investor.nvidia.com 官方来源"),
+        ],
+    ),
+]
+
+
+def write_whitepaper(ts):
+    """对外演示手册：用户旅程叙事，仅含 User / Developer 业务视图，不含编排控制台。"""
+    lines = [
+        "# 智能体 Skill 双端协同治理系统 — 对外演示手册",
+        "",
+        f"> 版本：{ts} ｜ 截图均取自系统真实运行画面（用户端工作台 / 治理侧控制台）",
+        "",
+        "## 系统在解决什么问题",
+        "",
+        "智能体正在成为分析师的工作伙伴，但每个智能体都带着各自独立的技能配置与本地规则。当同一类业务约束（如「官方数据源」）在多个智能体间反复失守时——",
+        "",
+        "- **一线用户**只能各自为战：每次踩坑后手动修正，修正经验留在个人本地，无法惠及团队；",
+        "- **治理侧**看不到一线发生了什么：规则沉淀靠文档和会议，发布一次全局变更，影响范围靠拍脑袋；",
+        "- **个人规则与全局规则**彼此不知情：升级后要么被静默覆盖，要么原地冲突，无人知晓。",
+        "",
+        "本系统以 **运行证据（Runtime Evidence）** 为纽带，让一线修正自动上行、治理引擎自动聚合、全局规则按依赖链平滑落地，并在下一次运行时闭环验证——形成「**局部经验 → 全局治理 → 局部消解**」的双端协同闭环。",
+        "",
+        "## 界面角色",
+        "",
+        "| 界面 | 角色 | 截图 |",
+        "| --- | --- | --- |",
+        "| 用户端 · 智能体工作台 | 分析师与智能体对话、执行任务、修正技能选择；治理规则在此实时生效 | ![用户端工作台](screenshots/demo/01-user-a-initial.png) |",
+        "| 治理侧 · 开发者控制台 | 证据聚类、候选规则审查、全局契约发布与传播监控 | ![开发者控制台](screenshots/demo/01-developer-initial.png) |",
+        "",
+        "---",
+        "",
+    ]
+    for title, paras, shots in SCENARIOS:
+        lines.append(f"## {title}\n")
+        for para in paras:
+            lines.append(para + "\n")
+        for png, cap in shots:
+            lines += [f"![{cap}](screenshots/demo/{png})", "", f"*{cap}*", ""]
+        lines.append("---\n")
+    lines += [
+        "## 结语",
+        "",
+        "从一次个人的手动修正，到一条全团队默认遵守的治理规则——运行证据让治理不再依赖文档与会议，而是由一线行为自然生长出来。",
+        "",
+        "*本手册由系统真实运行画面自动生成（`DEMO_MODE=presentation python scripts/capture_demo.py`）。*",
+        "",
+    ]
+    DOC.write_text("\n".join(lines), encoding="utf-8")
 
 if __name__ == "__main__":
     main()

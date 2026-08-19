@@ -1,0 +1,135 @@
+SkillOS
+
+开发者控制台
+
+治理总览
+治理收件箱
+64
+证据智能
+候选规则
+全局契约
+依赖网络
+历史记录
+
+全局治理
+
+v18
+
+ACTIVE
+v18
+跨窗口实时同步已启用
+4
+D
+Inbox
+Candidate GGC-101
+候选规则审阅
+GENERATED
+
+DEFAULT · IRSearch > WebSearch
+
+来源 证据
+
+3 items from 3 用户
+
+LE-USER-A-RN96
+user-a
+
+OfficialSourceRoutingMismatch
+
+quality 1.00 · v18
+
+LE-USER-B-JFKE
+user-b
+
+OfficialSourceRoutingMismatch
+
+quality 1.00 · v18
+
+LE-USER-C-XAM3
+user-c
+
+OfficialSourceRoutingMismatch
+
+quality 1.00 · v18
+
+PROMOTION
+0.81
+/ 0.75
+frequency 25%
+coverage 100%
+agreement 100%
+quality 100%
+Governance Proposal
+
+TYPE
+
+Global Default
+Global Invariant
+
+PROPOSED RULE
+
++
+WHEN taskType = official_filing
++
+AND sourceRequirement = official
++
+THEN IRSearch > WebSearch
+
+LINEAGE
+
+1
+
+Runtime 证据
+
+3 items
+
+2
+
+Cluster
+
+C-JM60
+
+3
+
+Candidate
+
+GGC-101
+
+4
+
+Global 契约
+
+pending publish
+
+3 independent users observed the same relation issue
+Resolution agreement 100%
+Promotion score 0.81 ≥ threshold 0.75
+Need More 证据
+保留为本地规则
+驳回
+修改
+批准并创建全局契约
+
+New Governance Signal
+
+LE-USER-C-XAM3 · OfficialSourceRoutingMismatch · user-c
+
+Inspect →
+
+Promotion Ready
+
+C-JM60 reached score 0.81 → GGC-101
+
+Review →
+
+New Governance Signal
+
+LE-USER-B-JFKE · OfficialSourceRoutingMismatch · user-b
+
+Inspect →
+
+New Governance Signal
+
+LE-USER-A-RN96 · OfficialSourceRoutingMismatch · user-a
+
+Inspect →

@@ -19,6 +19,9 @@ export default function DemoLauncher() {
   const speed = usePresentation(s => s.playbackSpeed);
   const setSpeed = usePresentation(s => s.setSpeed);
 
+  // 对外演示模式：隐藏编排控制台（剧本/事件日志/速度面板），仅保留业务窗口与旁白
+  const presentation = import.meta.env.VITE_DEMO_MODE === "presentation";
+
   const [playing, setPlaying] = React.useState(false);
   const [stepIdx, setStepIdx] = React.useState(-1);
   const [windowsOpen, setWindowsOpen] = React.useState(false);
@@ -91,7 +94,7 @@ export default function DemoLauncher() {
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.2,0.7,0.2,1] }}
-        className="w-full max-w-[1280px]"
+        className={`w-full max-w-[1280px] ${presentation ? "mode-presentation" : ""}`}
       >
         <div className="flex items-center gap-4 mb-6">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center shadow-pop">
@@ -122,7 +125,7 @@ export default function DemoLauncher() {
               ))}
             </div>
 
-            <SectionTitle icon="Bolt" title="演示速度" className="!mt-6" />
+            <SectionTitle icon="Bolt" title="演示速度" className="!mt-6 console-only" />
             <div className="grid grid-cols-4 gap-1.5">
               {[0.5, 1, 1.5, 2].map(m => (
                 <button key={m} onClick={() => setSpeed(m)}
@@ -149,7 +152,7 @@ export default function DemoLauncher() {
 
           {/* Right: script timeline + narration */}
           <Card className="col-span-12 lg:col-span-7 flex flex-col" >
-            <SectionTitle icon="History" title="演示剧本" subtitle={`共 ${DEMO_SCRIPT.length} 步 · 约 2–3 分钟`} />
+            <SectionTitle icon="History" title="演示剧本" subtitle={`共 ${DEMO_SCRIPT.length} 步 · 约 2–3 分钟`} className="console-only" />
 
             {/* Live narration */}
             <AnimatePresence mode="wait">
@@ -172,7 +175,7 @@ export default function DemoLauncher() {
             </AnimatePresence>
 
             {/* Timeline */}
-            <div className="flex-1 overflow-y-auto scroll-thin -mr-2 pr-2" style={{ maxHeight: 380 }}>
+            <div className="flex-1 overflow-y-auto scroll-thin -mr-2 pr-2 console-only" style={{ maxHeight: 380 }}>
               <ol className="relative">
                 {DEMO_SCRIPT.map((s, i) => {
                   const done = i < stepIdx;
@@ -204,7 +207,7 @@ export default function DemoLauncher() {
 
             {/* Log */}
             {log.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-ink-100">
+              <div className="mt-3 pt-3 border-t border-ink-100 console-only">
                 <p className="text-[10.5px] uppercase tracking-wider text-ink-400 font-semibold mb-1.5">事件日志</p>
                 <div className="space-y-1 max-h-24 overflow-y-auto scroll-thin">
                   {log.slice(-6).map(l => (

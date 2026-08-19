@@ -1,6 +1,7 @@
-# 智能体 Skill 双端协同治理系统 — 完整演示文档（自动截图）
+# 智能体 Skill 双端协同治理系统 — 完整演示文档（内部审查版）
 
-> 生成时间：2026-08-19 14:54 ｜ 环境：Chromium 1440×900，播放速度 1× ｜ 剧本源：`src/app/demoScript.ts`（共 25 步）
+> 生成时间：2026-08-20 00:11 ｜ 环境：Chromium 1440×900，播放速度 1× ｜ 剧本源：`src/app/demoScript.ts`（共 25 步）
+> ⚠️ 本文件含编排控制台（Launcher）与事件日志，仅供内部 QA 与专利审查使用；对外演示请使用 `DEMO-Whitepaper.md`。
 > 截图为演示自动运行过程中各窗口的真实状态，按剧本顺序排列，可直接用于审阅。
 
 ## 0. 演示启动
@@ -233,4 +234,5 @@
 ## 附注
 
 - 截图脚本：`web/scripts/capture_demo.py`（Playwright，可重复执行）。
+- 对外演示模式：`DEMO_MODE=presentation python scripts/capture_demo.py`，产出 `DEMO-Whitepaper.md`（不含编排控制台）。
 - 若剧本（`demoScript.ts`）调整了步骤或等待时长，重新运行脚本即可重新生成本文档。

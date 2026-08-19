@@ -1,0 +1,123 @@
+SkillOS
+
+开发者控制台
+
+治理总览
+治理收件箱
+64
+证据智能
+候选规则
+全局契约
+依赖网络
+历史记录
+
+全局治理
+
+v19
+
+ACTIVE
+v19
+跨窗口实时同步已启用
+5
+D
+Global Propagation
+DELTA-19
+
+v18 → v19
+
+View 契约
+
+Phase 1
+
+Commit
+
+Global version bumped
+
+Phase 2
+
+依赖
+
+ΔG scanned against local contracts
+
+Phase 3
+
+Invalidation
+
+Affected locals marked STALE
+
+4
+
+Phase 4
+
+Revalidation
+
+已退役 · Refinement · 冲突
+
+Commit
+
+Atomic global state update
+
+v18
+v19
+
+✓ COMMITTED
+
+ΔG Propagation
+
+Event pulse to user domains
+
+DELTA-19
+U1
+U2
+U3
+Invalidation
+
+3 affected contracts
+
+ACTIVE → STALE
+
+3
+
+of 3 affected
+
+Revalidation
+
+Three possible outcomes
+
+已退役
+1
+Refinement
+1
+冲突
+1
+
+Propagation complete · v19 is live
+
+User consoles have been notified and are running their revalidation.
+
+PUBLISHED
+返回 to 总览
+
+Global Governance v18 → v19
+
+3 local contracts affected
+
+Monitor →
+
+New Governance Signal
+
+LE-USER-C-XAM3 · OfficialSourceRoutingMismatch · user-c
+
+Inspect →
+
+Promotion Ready
+
+C-JM60 reached score 0.81 → GGC-101
+
+Review →
+
+New Governance Signal
+
+LE-USER-B-JFKE · OfficialSourceRoutingMismatch · user-b
+
+Inspect →

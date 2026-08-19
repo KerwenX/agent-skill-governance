@@ -1,0 +1,62 @@
+SkillOS
+
+开发者控制台
+
+治理总览
+治理收件箱
+64
+证据智能
+候选规则
+全局契约
+依赖网络
+历史记录
+
+全局治理
+
+v18
+
+ACTIVE
+v18
+跨窗口实时同步已启用
+4
+D
+证据 Intelligence
+
+证据 auto-clusters by relation, violation, context and version compatibility.
+
+Threshold
+0.75
+Cluster Canvas
+LE-USER-A-
+LE-USER-B-
+LE-USER-C-
+3
+C-JM60
+
+Select a cluster
+
+Click a violet/green node on the canvas to inspect 证据.
+
+New Governance Signal
+
+LE-USER-C-XAM3 · OfficialSourceRoutingMismatch · user-c
+
+Inspect →
+
+Promotion Ready
+
+C-JM60 reached score 0.81 → GGC-101
+
+Review →
+
+New Governance Signal
+
+LE-USER-B-JFKE · OfficialSourceRoutingMismatch · user-b
+
+Inspect →
+
+New Governance Signal
+
+LE-USER-A-RN96 · OfficialSourceRoutingMismatch · user-a
+
+Inspect →

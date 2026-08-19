@@ -152,3 +152,6 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible {
   box-shadow: 0 0 0 3px rgba(59,98,224,.25);
   border-radius: 10px;
 }
+
+/* 对外演示模式（VITE_DEMO_MODE=presentation）：隐藏编排控制台面板 */
+.mode-presentation .console-only { display: none; }

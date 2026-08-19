@@ -1,0 +1,68 @@
+周
+
+周 · 交易员
+
+DESK TRADER
+
+智能体工作台
+我的治理规则
+1
+治理更新
+历史记录
+
+全局基准版本
+
+v19
+
+收起侧栏
+冲突 Resolver
+CONFLICT
+
+LC-C-01 · User C · 仅使用 Web Search（交易终端屏蔽 IR 站点）
+
+Global
+
+Newly published global rule
+
+WHEN taskType=official_filing
+THEN IRSearch > WebSearch
+
+INCOMPATIBLE
+
+Local excludes the skill the global rule prioritizes.
+
+Local
+
+Your existing local rule
+
+taskType = "official_filing"
+sourceRequirement = "official"
+EXCLUSION: web-search excludes ir-search
+解决方式 Strategy
+
+Retire Local 规则
+
+Drop the local rule and accept global governance as-is.
+
+Refine Context
+
+Narrow the local rule so it applies only under a guard condition.
+
+Rebuild Local Governance
+
+Discard the local rule and construct a new one from scratch.
+
+Refined rule preview:
+
+WHEN taskType=official_filing
+AND irSearchUnavailable=true
+THEN WebSearch (fallback)
+取消
+CONFLICT
+Apply 解决方式
+
+Global Governance v18 → v19
+
+3 local contracts affected
+
+Review →

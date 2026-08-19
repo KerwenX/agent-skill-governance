@@ -1,0 +1,37 @@
+林
+
+林 · 分析师
+
+EQUITY RESEARCH ANALYST
+
+智能体工作台
+我的治理规则
+治理更新
+历史记录
+
+全局基准版本
+
+v19
+
+收起侧栏
+我的治理
+
+Local contracts scoped to this user · lifecycle managed automatically.
+
+New Local 规则
+生效中0
+待重验证0
+重验证中0
+生效中 Refinement0
+冲突0
+已退役1
+
+No 生效中 contracts
+
+本地规则s appear here after runtime 证据 is promoted to local governance.
+
+Global Governance v18 → v19
+
+3 local contracts affected
+
+Review →
