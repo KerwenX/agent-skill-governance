@@ -22,7 +22,7 @@ export default function DevDependencies() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[22px] font-bold text-ink-900">依赖 Network</h1>
+        <h1 className="text-[22px] font-bold text-ink-900">依赖网络</h1>
         <p className="text-[13px] text-ink-500 mt-0.5">
           Global 契约 → Skill / Relationship → Local 契约 → User / Agent
         </p>

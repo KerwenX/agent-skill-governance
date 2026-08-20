@@ -47,7 +47,7 @@ export default function DevCandidateReview() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-2 text-[12.5px] text-ink-500">
-        <button className="link-quiet" onClick={() => navigate("/developer/inbox")}>Inbox</button>
+        <button className="link-quiet" onClick={() => navigate("/developer/inbox")}>收件箱</button>
         <Icon name="ChevronR" size={12} />
         <span>Candidate {candidate.id}</span>
       </div>
@@ -65,7 +65,7 @@ export default function DevCandidateReview() {
       <div className="grid grid-cols-12 gap-5">
         {/* 证据 side */}
         <Card className="col-span-12 lg:col-span-5">
-          <SectionTitle icon="Inbox" title="来源 证据" subtitle={`${证据.length} items from ${cluster?.independentUserCount ?? 0} 用户`} />
+          <SectionTitle icon="Inbox" title="来源 证据" subtitle={`${证据.length} 条 · 来自 ${cluster?.independentUserCount ?? 0} 个用户`} />
           <div className="space-y-2">
             {证据.map(ev => ev && (
               <div key={ev.id} className="p-2.5 rounded-lg border border-ink-200 bg-ink-50/40">
@@ -74,7 +74,7 @@ export default function DevCandidateReview() {
                   <span className="chip chip-slate">{ev.userId}</span>
                 </div>
                 <p className="text-[12px] text-ink-700">{ev.violationType}</p>
-                <p className="text-[11px] text-ink-500 mt-0.5">quality {ev.qualityScore.toFixed(2)} · {ev.parentGlobalVersion}</p>
+                <p className="text-[11px] text-ink-500 mt-0.5">质量 {ev.qualityScore.toFixed(2)} · {ev.parentGlobalVersion}</p>
               </div>
             ))}
           </div>
@@ -83,10 +83,10 @@ export default function DevCandidateReview() {
             <div className="mt-4 card !shadow-none p-3">
               <ScoreTransition value={cluster.promotionScore} threshold={PROMOTION_THRESHOLD} label="Promotion" />
               <div className="mt-2 grid grid-cols-2 gap-2 text-[11.5px] text-ink-600">
-                <span>frequency <b className="text-ink-800">{(cluster.frequencyScore*100).toFixed(0)}%</b></span>
-                <span>coverage <b className="text-ink-800">{(cluster.coverageScore*100).toFixed(0)}%</b></span>
-                <span>agreement <b className="text-ink-800">{(cluster.resolutionAgreement*100).toFixed(0)}%</b></span>
-                <span>quality <b className="text-ink-800">{(cluster.evidenceQuality*100).toFixed(0)}%</b></span>
+                <span>频次 <b className="text-ink-800">{(cluster.frequencyScore*100).toFixed(0)}%</b></span>
+                <span>覆盖率 <b className="text-ink-800">{(cluster.coverageScore*100).toFixed(0)}%</b></span>
+                <span>一致性 <b className="text-ink-800">{(cluster.resolutionAgreement*100).toFixed(0)}%</b></span>
+                <span>质量 <b className="text-ink-800">{(cluster.evidenceQuality*100).toFixed(0)}%</b></span>
               </div>
             </div>
           )}
@@ -97,7 +97,7 @@ export default function DevCandidateReview() {
           <SectionTitle icon="FileCode" title="Governance Proposal" />
           <div className="space-y-4">
             <div>
-              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">Type</p>
+              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">类型</p>
               <div className="flex items-center gap-2">
                 <TypeChip active={candidate.proposedType === "DEFAULT"}  label="Global Default"
                          onClick={() => s.upsertCandidate({ ...candidate, proposedType: "DEFAULT" })} />
@@ -107,7 +107,7 @@ export default function DevCandidateReview() {
             </div>
 
             <div>
-              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">Proposed rule</p>
+              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">建议规则</p>
               <GovernanceDiff
                 lines={[
                   { sign: "+", text: `WHEN taskType = ${candidate.proposedPredicate.find(p => p.field === "taskType")?.value ?? "*"}` },
@@ -119,7 +119,7 @@ export default function DevCandidateReview() {
             </div>
 
             <div>
-              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">Lineage</p>
+              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">来源链路</p>
               <LineageTrail
                 nodes={[
                   { id: "1", label: "Runtime 证据", sub: `${证据.length} items`, tone: "slate" },
@@ -175,7 +175,7 @@ export default function DevCandidateReview() {
                   updateCandidate({ state: "KEPT_LOCAL", keepLocalReason: keptLocalReason });
                   setShowKeepLocal(false);
                   navigate("/developer/inbox");
-                }}>Confirm 保留为本地规则</Button>
+                }}>确认保留为本地规则</Button>
               </div>
             </div>
           </Card>

@@ -8,10 +8,10 @@ import { Funnel } from "../../components/animations/Animations";
 import { orchestrator } from "../../app/animations";
 
 const PHASES = [
-  { id: 1, key: "COMMIT",       label: "Commit",       desc: "Global version bumped" },
-  { id: 2, key: "DEPENDENCY",   label: "依赖",   desc: "ΔG scanned against local contracts" },
-  { id: 3, key: "INVALIDATION", label: "Invalidation", desc: "Affected locals marked STALE" },
-  { id: 4, key: "REVALIDATION", label: "Revalidation", desc: "已退役 · Refinement · 冲突" },
+  { id: 1, key: "COMMIT",       label: "提交",       desc: "全局版本升级" },
+  { id: 2, key: "DEPENDENCY",   label: "依赖扫描",   desc: "变更集与本地契约比对" },
+  { id: 3, key: "INVALIDATION", label: "本地失效", desc: "受影响本地契约标记待重验证" },
+  { id: 4, key: "REVALIDATION", label: "重验证", desc: "已退役 · 精化 · 冲突" },
 ];
 
 export default function DevPropagation() {
@@ -50,7 +50,7 @@ export default function DevPropagation() {
   }, [cs]);
 
   if (!cs) {
-    return <Empty title="Change set not found" body="可能已被重置。"
+    return <Empty title="未找到变更集" body="可能已被重置。"
       cta={<Button onClick={() => navigate("/developer")}>总览</Button>} />;
   }
 
@@ -158,7 +158,7 @@ export default function DevPropagation() {
         <Card className={`col-span-12 lg:col-span-6 transition-opacity ${phase >= 3 ? "opacity-100" : "opacity-50"}`}>
           <SectionTitle icon="Bolt" title="Invalidation" subtitle={`${cs.affectedContractIds.length} affected contracts`} />
           <div className="text-center py-3">
-            <p className="text-[12px] uppercase tracking-wider text-ink-500">ACTIVE → STALE</p>
+            <p className="text-[12px] uppercase tracking-wider text-ink-500">生效中 → 待重验证</p>
             <p className="text-[44px] font-bold mono text-amber-600 leading-none mt-2">
               {staleCount}
             </p>
@@ -184,7 +184,7 @@ export default function DevPropagation() {
             />
           )}
           {phase < 4 && (
-            <p className="text-[12.5px] text-ink-500 italic text-center py-6">Waiting for invalidation to complete…</p>
+            <p className="text-[12.5px] text-ink-500 italic text-center py-6">正在等待失效处理完成…</p>
           )}
         </Card>
       </div>

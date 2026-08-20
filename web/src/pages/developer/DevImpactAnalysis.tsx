@@ -61,26 +61,26 @@ export default function DevImpactAnalysis() {
       cta={<Button onClick={() => navigate("/developer/inbox")}>返回收件箱</Button>} />;
   }
   const diffLines = [
-    ...draft.predicate.map(p => `WHEN ${p.field} ${p.operator.toLowerCase().replace("_"," ")} ${JSON.stringify(p.value)}`),
-    ...draft.relations.map(r => `THEN ${humanRelation(r, s.skills)}`),
+    ...draft.predicate.map(p => `当 ${p.field} ${p.operator.toLowerCase().replace("_"," ")} ${JSON.stringify(p.value)}`),
+    ...draft.relations.map(r => `则 ${humanRelation(r, s.skills)}`),
   ];
 
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-2 text-[12.5px] text-ink-500">
         <button className="link-quiet" onClick={() => navigate(-1)}>返回</button>
-        <Icon name="ChevronR" size={12} /><span>Impact Analysis</span>
+        <Icon name="ChevronR" size={12} /><span>影响分析</span>
       </div>
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-[22px] font-bold text-ink-900">Impact Analysis</h1>
+          <h1 className="text-[22px] font-bold text-ink-900">影响分析</h1>
           <p className="text-[13px] text-ink-500 mt-0.5">
             <span className="mono">{changeSet.fromVersion}</span> →{" "}
             <span className="mono text-brand-700 font-semibold">{changeSet.toVersion}</span>
           </p>
         </div>
         <Button variant="primary" icon="Bolt" disabled={scanning} onClick={runScan}>
-          {scanning ? "Scanning…" : done ? "Re-run Scan" : "Run Impact Analysis"}
+          {scanning ? "扫描中…" : done ? "重新扫描" : "Run 影响分析"}
         </Button>
       </div>
 
@@ -112,7 +112,7 @@ export default function DevImpactAnalysis() {
                       transition={{ duration: 0.3 }} />
                     {scanning && count < total && (
                       <span className="absolute inset-0 flex items-center justify-center text-[11px] text-ink-500">
-                        Scanning…
+                        扫描中…
                       </span>
                     )}
                   </div>
@@ -126,13 +126,13 @@ export default function DevImpactAnalysis() {
 
           <div className="grid grid-cols-2 gap-3 mt-5">
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
-              <p className="text-[11px] uppercase tracking-wider text-amber-700 font-semibold">Affected</p>
+              <p className="text-[11px] uppercase tracking-wider text-amber-700 font-semibold">受影响</p>
               <p className="text-[30px] font-bold text-amber-800 mono leading-none mt-1">
                 {done ? <AnimatedNumber value={affected.length} /> : "—"}
               </p>
             </div>
             <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
-              <p className="text-[11px] uppercase tracking-wider text-emerald-700 font-semibold">Unaffected</p>
+              <p className="text-[11px] uppercase tracking-wider text-emerald-700 font-semibold">不受影响</p>
               <p className="text-[30px] font-bold text-emerald-800 mono leading-none mt-1">
                 {done ? <AnimatedNumber value={s.platformStats.localContractsObserved - affected.length} /> : "—"}
               </p>
@@ -152,7 +152,7 @@ export default function DevImpactAnalysis() {
               <text x={450} y={50} textAnchor="middle" fill="white" fontSize="11" fontWeight="700" fontFamily="Fira Code">
                 {toVer}
               </text>
-              <text x={450} y={65} textAnchor="middle" fill="#BFDBFE" fontSize="9">◆ CHANGED</text>
+              <text x={450} y={65} textAnchor="middle" fill="#BFDBFE" fontSize="9">◆ 已变更</text>
             </g>
             {/* Local nodes */}
             {allLocals.slice(0, 14).map((lc, i) => {
@@ -197,5 +197,5 @@ export default function DevImpactAnalysis() {
 
 function label(cat: string) {
   return { ParentContract: "父版本 契约", SkillVersion: "Skill Version",
-           Relationship: "Relationship", ContextSchema: "Context Schema" }[cat] ?? cat;
+           Relationship: "技能关系", ContextSchema: "上下文模式" }[cat] ?? cat;
 }

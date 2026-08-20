@@ -62,10 +62,10 @@ const STATE_STYLES: Record<string, string> = {
   ACTIVE_REFINEMENT:  "chip-violet",
   CONFLICT:           "chip-rose",
   PROMOTION_READY:    "chip-brand",
-  聚类ED:          "chip-slate",
+  CLUSTERED:          "chip-slate",
   EVALUATING:         "chip-amber",
   LOCAL_ONLY:         "chip-slate",
-  候选_CREATED:  "chip-brand",
+  CANDIDATE_CREATED:  "chip-brand",
   GENERATED:          "chip-slate",
   UNDER_REVIEW:       "chip-amber",
   APPROVED:           "chip-emerald",
@@ -80,8 +80,14 @@ const STATE_STYLES: Record<string, string> = {
 };
 
 const STATE_LABEL: Record<string, string> = {
-  ACTIVE_REFINEMENT: "REFINEMENT",
-  NEEDS_MORE_EVIDENCE: "NEED MORE",
+  ACTIVE: "生效中", STALE: "待重验证", REVALIDATING: "重验证中", RETIRED: "已退役",
+  ACTIVE_REFINEMENT: "精化中", CONFLICT: "冲突", PROMOTION_READY: "可升级",
+  CLUSTERED: "已聚类", EVALUATING: "评估中", LOCAL_ONLY: "仅本地", CANDIDATE_CREATED: "已生成候选",
+  GENERATED: "已生成", UNDER_REVIEW: "审查中", APPROVED: "已批准", REJECTED: "已驳回",
+  KEPT_LOCAL: "保留本地", NEEDS_MORE_EVIDENCE: "证据不足", PUBLISHED: "已发布",
+  DETECTED: "已检测", STRUCTURED: "已结构化", LOCAL: "本地", LIVE: "实时",
+  SUCCEEDED: "成功", ANOMALY_DETECTED: "异常", CORRECTED: "已修正",
+  RUNNING: "运行中", IDLE: "空闲",
 };
 
 export const StateBadge: React.FC<{ state: string; pulse?: boolean; className?: string }> = ({ state, pulse, className = "" }) => {

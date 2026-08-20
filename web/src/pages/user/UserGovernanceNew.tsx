@@ -106,9 +106,9 @@ export default function UserGovernanceNew() {
       <div className="max-w-[1100px] mx-auto p-6 space-y-5">
         <div className="flex items-center gap-2 text-[12.5px] text-ink-500">
           <button className="link-quiet" onClick={() => navigate(-1)}>返回</button>
-          <Icon name="ChevronR" size={12} /><span>New Local Governance</span>
+          <Icon name="ChevronR" size={12} /><span>新建本地治理</span>
         </div>
-        <h1 className="text-[22px] font-bold text-ink-900">Local Governance Builder</h1>
+        <h1 className="text-[22px] font-bold text-ink-900">新建本地治理</h1>
 
         {证据 && (
           <Card>
@@ -122,7 +122,7 @@ export default function UserGovernanceNew() {
             <SectionTitle icon="FileCode" title="规则 Builder" />
 
             <div>
-              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">WHEN</p>
+              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">当</p>
               <div className="grid grid-cols-2 gap-2">
                 <input value={predicate.taskType}
                   onChange={e => setPredicate(p => ({ ...p, taskType: e.target.value }))}
@@ -134,14 +134,14 @@ export default function UserGovernanceNew() {
             </div>
 
             <div>
-              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">THEN</p>
+              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">则</p>
               <select value={relation.type}
                 onChange={e => setRelation(r => ({ ...r, type: e.target.value }))}
                 className="h-9 px-3 rounded-lg border border-ink-200 text-[13px] w-full mb-2">
-                <option value="PRIORITY">Priority</option>
-                <option value="EXCLUSION">Exclusion</option>
-                <option value="ORDER">Order</option>
-                <option value="FALLBACK">Fallback</option>
+                <option value="PRIORITY">优先级</option>
+                <option value="EXCLUSION">排除</option>
+                <option value="ORDER">顺序</option>
+                <option value="FALLBACK">回退</option>
               </select>
               <div className="grid grid-cols-2 gap-2">
                 <select value={relation.source}
@@ -176,10 +176,10 @@ export default function UserGovernanceNew() {
             <Card>
               <SectionTitle icon="Git" title="依赖 Preview" />
               <ul className="text-[12px] space-y-1.5 text-ink-700">
-                <li>父版本 Global: <span className="mono text-brand-700">GC-1014 ({s.globalVersion})</span></li>
-                <li>Skill Versions: <span className="mono">{relation.source}@{s.skills[relation.source]?.version}, {relation.target}@{s.skills[relation.target]?.version}</span></li>
-                <li>Relationship: <span className="mono">{relation.type}</span></li>
-                <li>Context Schema: <span className="mono">{predicate.taskType}</span></li>
+                <li>父版本（全局）: <span className="mono text-brand-700">GC-1014 ({s.globalVersion})</span></li>
+                <li>技能版本: <span className="mono">{relation.source}@{s.skills[relation.source]?.version}, {relation.target}@{s.skills[relation.target]?.version}</span></li>
+                <li>技能关系: <span className="mono">{relation.type}</span></li>
+                <li>上下文模式: <span className="mono">{predicate.taskType}</span></li>
               </ul>
               <p className="text-[11.5px] text-ink-500 mt-2">
                 This dependency lets future global changes determine whether this local rule must be revalidated.

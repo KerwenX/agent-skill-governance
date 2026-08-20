@@ -50,7 +50,7 @@ export default function DevContractDetail() {
           <SectionTitle title="Predicate & Relations" />
           <div className="space-y-3">
             <div>
-              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">WHEN</p>
+              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">当</p>
               <div className="space-y-1">
                 {contract.predicate.map((p, i) => (
                   <div key={i} className="text-[12.5px] mono bg-ink-50 border border-ink-100 rounded-lg px-3 py-1.5">
@@ -60,7 +60,7 @@ export default function DevContractDetail() {
               </div>
             </div>
             <div>
-              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">THEN</p>
+              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">则</p>
               <div className="space-y-1">
                 {contract.relations.map((r, i) => (
                   <div key={i} className="text-[12.5px] mono bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-3 py-1.5">
@@ -99,20 +99,20 @@ export default function DevContractDetail() {
             <div className="grid grid-cols-4 gap-3">
               <ImpactTile label="Affected"  value={latestCs.affectedContractIds.length} color="amber" />
               <ImpactTile label="已退役"   value={latestCs.revalidation?.retired.length ?? 0} color="slate" />
-              <ImpactTile label="Refinement" value={latestCs.revalidation?.refined.length ?? 0} color="violet" />
+              <ImpactTile label="精化" value={latestCs.revalidation?.refined.length ?? 0} color="violet" />
               <ImpactTile label="冲突"  value={latestCs.revalidation?.conflicted.length ?? 0} color="rose" />
             </div>
-          ) : <p className="text-[12.5px] text-ink-500 italic">No propagation data yet.</p>}
+          ) : <p className="text-[12.5px] text-ink-500 italic">暂无传播数据。</p>}
         </Card>
       )}
 
       {tab === "依赖" && (
         <Card>
-          <SectionTitle title="依赖 Policy" />
+          <SectionTitle title="依赖策略" />
           <p className="text-[12.5px] text-ink-600">
-            Local contracts based on this rule track: <b>parent contract</b>, <b>skill versions</b>,{" "}
-            <b>relationship</b> and <b>context schema</b>. When any of these change, dependent local contracts
-            enter <span className="chip chip-amber">STALE</span> and revalidation is triggered automatically.
+            依赖本规则的本地契约追踪：<b>父契约</b>、<b>技能版本</b>、
+            <b>技能关系</b>与<b>上下文模式</b>。其中任何一项变更，依赖的本地契约
+            进入<span className="chip chip-amber">待重验证</span>状态，并自动触发重验证。
           </p>
         </Card>
       )}
@@ -121,8 +121,8 @@ export default function DevContractDetail() {
         <Card>
           <SectionTitle title="History" />
           <ul className="space-y-2 text-[12.5px]">
-            <历史记录Item time="—" title={`${contract.id} published`} sub={`based on ${candidate?.id ?? "candidate"} · ${contract.originEvidenceIds.length} 证据`} />
-            <历史记录Item time="—" title={`${candidate?.id ?? "Candidate"} approved`} sub="promotion threshold crossed" />
+            <历史记录Item time="—" title={`${contract.id} 已发布`} sub={`based on ${candidate?.id ?? "candidate"} · ${contract.originEvidenceIds.length} 证据`} />
+            <历史记录Item time="—" title={`${candidate?.id ?? "候选"} 已批准`} sub="升级阈值已越过" />
           </ul>
         </Card>
       )}

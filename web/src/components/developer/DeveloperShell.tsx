@@ -5,7 +5,6 @@ import { useGovernance } from "../../store/governance";
 import { Icon, IconName } from "../common/Icons";
 import { StateBadge } from "../common/UI";
 import { useDevDemoCommands } from "../../hooks/useDemoCommands";
-import ScenarioSwitcher from "../common/ScenarioSwitcher";
 
 const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: "/developer",           label: "治理总览",       icon: "Pulse"   },
@@ -79,7 +78,6 @@ export default function DeveloperShell() {
             <span className="hidden md:inline">跨窗口实时同步</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           </div>
-          <div className="ml-4"><ScenarioSwitcher /></div>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => { setBellOpen(v => !v); markRead(); }}

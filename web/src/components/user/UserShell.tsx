@@ -4,7 +4,6 @@ import { useGovernance } from "../../store/governance";
 import { useUserRevalidation } from "../../hooks/useUserRevalidation";
 import { eventBus } from "../../app/eventBus";
 import { Icon, IconName } from "../common/Icons";
-import ScenarioSwitcher from "../common/ScenarioSwitcher";
 
 export default function UserShell() {
   const { userId } = useParams();
@@ -103,11 +102,6 @@ export default function UserShell() {
         </nav>
 
         <div className="p-2 border-t border-ink-100 space-y-2">
-          {!collapsed && (
-            <div className="px-1 py-1">
-              <ScenarioSwitcher compact />
-            </div>
-          )}
           <div className={`card p-2.5 !shadow-none ${collapsed ? "text-center" : ""}`}>
             <p className={`text-[10px] uppercase tracking-wider text-ink-500 font-medium ${collapsed ? "hidden" : ""}`}>全局基准版本</p>
             <p className="text-[16px] font-bold text-brand-700 mono leading-none mt-1">{globalVersion}</p>

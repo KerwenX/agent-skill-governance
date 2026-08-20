@@ -11,6 +11,7 @@ import type {
   RuntimeExecution, Skill, User,
 } from "../domain/types";
 import { eventBus, nextId } from "../app/eventBus";
+import { deleteDb, persistCandidate, persistChangeSet, persistCluster, persistContract, persistEvidence, persistRuntime } from "../data/db";
 import { recomputeClusters } from "../engines/clusterSync";
 
 export type WindowRole = "demo" | "developer" | "user";
@@ -58,6 +59,7 @@ export interface GovernanceState {
 
   addLocalContract: (c: GovernanceContract) => void;
   updateLocalContract: (id: string, patch: Partial<GovernanceContract>) => void;
+  deleteLocalContract: (id: string) => void;
   addGlobalContract: (c: GovernanceContract) => void;
 
   upsertCluster: (c: EvidenceCluster) => void;
@@ -78,6 +80,7 @@ const toMap = <T extends { id: string }>(arr: T[]) =>
   Object.fromEntries(arr.map(x => [x.id, x])) as Record<string, T>;
 
 function seedFor(scenario: ScenarioConfig) {
+  const seed = scenario.seed;
   return {
     scenarioId: scenario.id,
     scenario,
@@ -88,14 +91,18 @@ function seedFor(scenario: ScenarioConfig) {
     platformStats: scenario.platformStats,
     globalContracts: toMap(scenario.globalContracts),
     localContracts: toMap(scenario.localContracts),
-    evidence: {},
-    clusters: {},
-    candidates: {},
-    changeSets: {},
+    evidence: toMap(seed?.evidence ?? []),
+    clusters: toMap(seed?.clusters ?? []),
+    candidates: toMap(seed?.candidates ?? []),
+    changeSets: toMap(seed?.changeSets ?? []),
     runtimes: {},
     events: [],
-    notifications: [],
-    evidenceInboxCount: 0,
+    notifications: (seed?.notifications ?? []).map((n, i) => ({
+      id: `ntf-${i}`, kind: n.kind, title: n.title, body: n.body,
+      createdAt: n.ageDays ? Date.now() - n.ageDays * 86_400_000 : Date.now(),
+      read: n.read ?? true,
+    })),
+    evidenceInboxCount: (seed?.evidence ?? []).length,
     sessionPermissions: {} as Record<string, string[]>,
   };
 }
@@ -256,31 +263,41 @@ export const useGovernance = create<GovernanceState>((set, get) => ({
     }
   },
 
-  addRuntime: (rt) => set(s => ({ runtimes: { ...s.runtimes, [rt.id]: rt } })),
+  addRuntime: (rt) => { persistRuntime(rt); set(s => ({ runtimes: { ...s.runtimes, [rt.id]: rt } })); },
   updateRuntime: (id, patch) =>
     set(s => {
       const prev = s.runtimes[id]; if (!prev) return s;
-      return { runtimes: { ...s.runtimes, [id]: { ...prev, ...patch } } };
+      const next = { ...prev, ...patch };
+      persistRuntime(next);
+      return { runtimes: { ...s.runtimes, [id]: next } };
     }),
 
-  addEvidence: (e) => set(s => ({ evidence: { ...s.evidence, [e.id]: e } })),
+  addEvidence: (e) => { persistEvidence(e); set(s => ({ evidence: { ...s.evidence, [e.id]: e } })); },
   updateEvidence: (id, patch) =>
     set(s => {
       const prev = s.evidence[id]; if (!prev) return s;
-      return { evidence: { ...s.evidence, [id]: { ...prev, ...patch } } };
+      const next = { ...prev, ...patch };
+      persistEvidence(next);
+      return { evidence: { ...s.evidence, [id]: next } };
     }),
 
-  addLocalContract: (c) => set(s => ({ localContracts: { ...s.localContracts, [c.id]: c } })),
+  addLocalContract: (c) => { persistContract("localContracts", c); set(s => ({ localContracts: { ...s.localContracts, [c.id]: c } })); },
   updateLocalContract: (id, patch) =>
     set(s => {
       const prev = s.localContracts[id]; if (!prev) return s;
-      return { localContracts: { ...s.localContracts, [id]: { ...prev, ...patch, updatedAt: Date.now() } } };
+      const next = { ...prev, ...patch, updatedAt: Date.now() };
+      persistContract("localContracts", next);
+      return { localContracts: { ...s.localContracts, [id]: next } };
     }),
-  addGlobalContract: (c) => set(s => ({ globalContracts: { ...s.globalContracts, [c.id]: c } })),
+  deleteLocalContract: (id) => {
+    deleteDb("localContracts", id);
+    set(s => { const next = { ...s.localContracts }; delete next[id]; return { localContracts: next }; });
+  },
+  addGlobalContract: (c) => { persistContract("globalContracts", c); set(s => ({ globalContracts: { ...s.globalContracts, [c.id]: c } })); },
 
-  upsertCluster: (c) => set(s => ({ clusters: { ...s.clusters, [c.id]: c } })),
-  upsertCandidate: (c) => set(s => ({ candidates: { ...s.candidates, [c.id]: c } })),
-  addChangeSet: (c) => set(s => ({ changeSets: { ...s.changeSets, [c.id]: c } })),
+  upsertCluster: (c) => { persistCluster(c); set(s => ({ clusters: { ...s.clusters, [c.id]: c } })); },
+  upsertCandidate: (c) => { persistCandidate(c); set(s => ({ candidates: { ...s.candidates, [c.id]: c } })); },
+  addChangeSet: (c) => { persistChangeSet(c); set(s => ({ changeSets: { ...s.changeSets, [c.id]: c } })); },
 
   pushNotification: (n) =>
     set(s => ({ notifications: [{ ...n, id: nextId("ntf"), createdAt: Date.now() }, ...s.notifications].slice(0, 30) })),

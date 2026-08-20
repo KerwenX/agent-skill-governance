@@ -56,11 +56,11 @@ export default function DevEvidence() {
     <div className="space-y-5">
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-[22px] font-bold text-ink-900">证据 Intelligence</h1>
-          <p className="text-[13px] text-ink-500 mt-0.5">证据 auto-clusters by relation, violation, context and version compatibility.</p>
+          <h1 className="text-[22px] font-bold text-ink-900">证据智能</h1>
+          <p className="text-[13px] text-ink-500 mt-0.5">证据按技能关系、违规类型、上下文与版本兼容性自动聚类。</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="chip">Threshold <b className="mono ml-1">{PROMOTION_THRESHOLD.toFixed(2)}</b></span>
+          <span className="chip">升级阈值 <b className="mono ml-1">{PROMOTION_THRESHOLD.toFixed(2)}</b></span>
         </div>
       </div>
 
@@ -68,7 +68,7 @@ export default function DevEvidence() {
         {/* Canvas */}
         <Card pad={false} className="col-span-12 lg:col-span-8 overflow-hidden relative" style={{ minHeight: 480 }}>
           <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
-            <span className="chip chip-violet"><Icon name="Git" size={12} /> Cluster Canvas</span>
+            <span className="chip chip-violet"><Icon name="Git" size={12} /> 聚类画布</span>
           </div>
           <svg viewBox="0 0 520 440" className="w-full h-[480px] grid-bg">
             {/* Edges */}
@@ -150,8 +150,8 @@ export default function DevEvidence() {
                     <SectionTitle icon="Inbox" title={ev.id} subtitle={ev.violationType} />
                     <p className="text-[12.5px] text-ink-600 mb-2">{humanRelation(ev.skillRelation)}</p>
                     <dl className="text-[12px] space-y-1">
-                      <div className="flex justify-between"><dt className="text-ink-500">User</dt><dd className="mono">{ev.userId}</dd></div>
-                      <div className="flex justify-between"><dt className="text-ink-500">Quality</dt><dd className="mono">{ev.qualityScore.toFixed(2)}</dd></div>
+                      <div className="flex justify-between"><dt className="text-ink-500">用户</dt><dd className="mono">{ev.userId}</dd></div>
+                      <div className="flex justify-between"><dt className="text-ink-500">质量</dt><dd className="mono">{ev.qualityScore.toFixed(2)}</dd></div>
                       <div className="flex justify-between"><dt className="text-ink-500">父版本</dt><dd className="mono">{ev.parentGlobalVersion}</dd></div>
                     </dl>
                   </div>
@@ -167,13 +167,13 @@ export default function DevEvidence() {
                     <div className="grid grid-cols-2 gap-2 text-[12.5px]">
                       <Metric k="Indep. 用户" v={c.independentUserCount} />
                       <Metric k="证据" v={c.totalEvidenceCount} />
-                      <Metric k="Frequency" v={`${(c.frequencyScore*100).toFixed(0)}%`} />
-                      <Metric k="Coverage" v={`${(c.coverageScore*100).toFixed(0)}%`} />
-                      <Metric k="Agreement" v={`${(c.resolutionAgreement*100).toFixed(0)}%`} />
-                      <Metric k="Quality" v={`${(c.evidenceQuality*100).toFixed(0)}%`} />
+                      <Metric k="频次" v={`${(c.frequencyScore*100).toFixed(0)}%`} />
+                      <Metric k="覆盖率" v={`${(c.coverageScore*100).toFixed(0)}%`} />
+                      <Metric k="一致性" v={`${(c.resolutionAgreement*100).toFixed(0)}%`} />
+                      <Metric k="质量" v={`${(c.evidenceQuality*100).toFixed(0)}%`} />
                     </div>
                     <div className="card !shadow-none p-3">
-                      <ScoreTransition value={c.promotionScore} threshold={PROMOTION_THRESHOLD} label="Promotion" />
+                      <ScoreTransition value={c.promotionScore} threshold={PROMOTION_THRESHOLD} label="升级评分" />
                       <div className="mt-1.5 h-1.5 bg-ink-100 rounded-full overflow-hidden">
                         <motion.div className="h-full bg-gradient-to-r from-brand-500 to-emerald-500"
                           initial={{ width: 0 }} animate={{ width: `${c.promotionScore*100}%` }} />
@@ -193,7 +193,7 @@ export default function DevEvidence() {
               );
             })()
           ) : (
-            <Empty icon="Git" title="Select a cluster" body="Click a violet/green node on the canvas to inspect 证据." />
+            <Empty icon="Git" title="选择一个聚类" body="点击画布上的紫色/绿色节点查看证据详情。" />
           )}
         </Card>
       </div>

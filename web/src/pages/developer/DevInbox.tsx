@@ -30,8 +30,8 @@ export default function DevInbox() {
     <div className="space-y-5">
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-[22px] font-bold text-ink-900">Governance Inbox</h1>
-          <p className="text-[13px] text-ink-500 mt-0.5">Local signals, 证据 clusters, candidates and conflicts.</p>
+          <h1 className="text-[22px] font-bold text-ink-900">治理收件箱</h1>
+          <p className="text-[13px] text-ink-500 mt-0.5">本地信号、证据聚类、候选规则与冲突。</p>
         </div>
       </div>
 
@@ -97,9 +97,9 @@ export default function DevInbox() {
                   </p>
                   <p className="text-[11.5px] text-ink-500 mt-0.5 mono">{humanRelation(c.skillRelation)}</p>
                   <div className="flex items-center gap-3 mt-2 text-[11px] text-ink-500">
-                    <span>coverage <b className="text-ink-700">{(c.coverageScore*100).toFixed(0)}%</b></span>
-                    <span>agreement <b className="text-ink-700">{(c.resolutionAgreement*100).toFixed(0)}%</b></span>
-                    <span>score <b className={c.promotionScore >= 0.75 ? "text-emerald-600" : "text-ink-700"}>{c.promotionScore.toFixed(2)}</b></span>
+                    <span>覆盖率 <b className="text-ink-700">{(c.coverageScore*100).toFixed(0)}%</b></span>
+                    <span>一致性 <b className="text-ink-700">{(c.resolutionAgreement*100).toFixed(0)}%</b></span>
+                    <span>评分 <b className={c.promotionScore >= 0.75 ? "text-emerald-600" : "text-ink-700"}>{c.promotionScore.toFixed(2)}</b></span>
                   </div>
                 </div>
               </div>
@@ -137,7 +137,7 @@ export default function DevInbox() {
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="chip chip-rose">CONFLICT</span>
+                  <span className="chip chip-rose">冲突</span>
                   <span className="mono text-[12px] font-semibold">{c.id}</span>
                   <StateBadge state={c.state} className="ml-auto" />
                 </div>
@@ -156,7 +156,6 @@ export default function DevInbox() {
         <Empty
           title={`No ${tab === "全部" ? "signals" : tab.toLowerCase()} yet`}
           body="Run a user task and submit a correction — 证据 will stream in here in real time."
-          cta={<Button variant="soft" onClick={() => window.open("/user/user-a", "_blank")}>打开用户 A window</Button>}
         />
       )}
     </div>

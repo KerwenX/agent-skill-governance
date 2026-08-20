@@ -40,8 +40,8 @@ export default function DevHistory() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[22px] font-bold text-ink-900">Governance 历史记录</h1>
-        <p className="text-[13px] text-ink-500 mt-0.5">Chronological event timeline across the control plane.</p>
+        <h1 className="text-[22px] font-bold text-ink-900">治理历史记录</h1>
+        <p className="text-[13px] text-ink-500 mt-0.5">治理侧按时间顺序的事件时间线。</p>
       </div>
       <Card>
         <SectionTitle icon="History" title="Timeline" />

@@ -64,7 +64,7 @@ export default function UserRevalidation() {
   }, [contractId]);
 
   if (!contract) {
-    return <Empty title="契约 not found" cta={<Button onClick={() => navigate(-1)}>返回</Button>} />;
+    return <Empty title="未找到该契约" cta={<Button onClick={() => navigate(-1)}>返回</Button>} />;
   }
 
   return (
@@ -72,7 +72,7 @@ export default function UserRevalidation() {
       <div className="max-w-[1100px] mx-auto p-6 space-y-5">
         <div className="flex items-center gap-2 text-[12.5px] text-ink-500">
           <button className="link-quiet" onClick={() => navigate(-1)}>返回</button>
-          <Icon name="ChevronR" size={12} /><span>Revalidation</span>
+          <Icon name="ChevronR" size={12} /><span>重验证</span>
         </div>
         <div className="flex items-end justify-between">
           <div>
@@ -117,7 +117,7 @@ export default function UserRevalidation() {
                   </div>
                 ))}
               </div>
-            ) : <p className="text-[12.5px] text-ink-500 italic">No global change data.</p>}
+            ) : <p className="text-[12.5px] text-ink-500 italic">暂无全局变更数据。</p>}
           </Card>
 
           {/* Local contract */}

@@ -27,14 +27,14 @@ export default function DevOverview() {
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-[22px] font-bold text-ink-900 leading-tight">Governance 总览</h1>
+          <h1 className="text-[22px] font-bold text-ink-900 leading-tight">治理总览</h1>
           <p className="text-[13px] text-ink-500 mt-0.5">
             跨窗口信号流 · 全局基准 <span className="mono text-brand-700 font-semibold">{s.globalVersion}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" icon="History" onClick={() => navigate("/developer/history")}>历史记录</Button>
-          <Button variant="soft" icon="Git" onClick={() => navigate("/developer/证据")}>证据 Intelligence</Button>
+          <Button variant="soft" icon="Git" onClick={() => navigate("/developer/证据")}>证据智能</Button>
           <Button variant="primary" icon="ArrowR" onClick={() => navigate("/developer/inbox")}>
             打开收件箱
           </Button>
@@ -44,9 +44,9 @@ export default function DevOverview() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="技能"              value={s.platformStats.skills} icon="Cog"       accent="brand" />
-        <StatCard label="Global 契约s"    value={Object.keys(s.globalContracts).length} icon="Book" accent="brand" />
+        <StatCard label="全局契约"    value={Object.keys(s.globalContracts).length} icon="Book" accent="brand" />
         <StatCard label="观测到本地契约"      value={s.platformStats.localContractsObserved} icon="Layers" accent="violet" />
-        <StatCard label="证据 Total"      value={s.evidenceInboxCount} icon="Inbox" accent="amber" delta={证据List.length} />
+        <StatCard label="证据总数"      value={s.evidenceInboxCount} icon="Inbox" accent="amber" delta={证据List.length} />
       </div>
 
       <div className="grid grid-cols-12 gap-5">
@@ -58,11 +58,11 @@ export default function DevOverview() {
             right={<StateBadge state="LIVE" />}
           />
           <div className="grid grid-cols-4 gap-3 mb-4">
-            <Tile label="New 证据"     value={s.evidenceInboxCount} color="text-brand-700" />
+            <Tile label="新证据"     value={s.evidenceInboxCount} color="text-brand-700" />
             <Tile label="聚类"         value={clusters.length}      color="text-violet-700" />
             <Tile label="可升级"  value={clusters.filter(c => c.state === "PROMOTION_READY").length} color="text-emerald-700"
                   pulse={clusters.some(c => c.state === "PROMOTION_READY")} />
-            <Tile label="冲突s"        value={conflictCount}        color="text-rose-700" />
+            <Tile label="冲突"        value={conflictCount}        color="text-rose-700" />
           </div>
 
           {clusters.length > 0 && (
@@ -98,7 +98,6 @@ export default function DevOverview() {
               icon="Inbox"
               title="等待本地证据"
               body="在用户窗口运行任务并触发修正，证据将实时出现在这里。"
-              cta={<Button variant="soft" onClick={() => window.open("/user/user-a", "_blank")}>打开用户 A</Button>}
             />
           )}
         </Card>
@@ -118,7 +117,7 @@ export default function DevOverview() {
                 className="w-full text-left p-3 rounded-lg border border-ink-200 hover:border-brand-300 transition-colors">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="mono text-[12px] font-semibold text-brand-700">{cs.fromVersion} → {cs.toVersion}</span>
-                  <span className="chip chip-emerald ml-auto">PUBLISHED</span>
+                  <span className="chip chip-emerald ml-auto">已发布</span>
                 </div>
                 <p className="text-[11.5px] text-ink-500">
                   {cs.affectedContractIds.length} local affected · {cs.revalidation?.retired.length ?? 0} retired
@@ -135,7 +134,7 @@ export default function DevOverview() {
             <HealthTile label="生效中"      value={activeCount}   color="emerald" />
             <HealthTile label="待重验证"       value={staleCount}    color="amber" />
             <HealthTile label="已退役"     value={retiredCount}  color="slate" />
-            <HealthTile label="Refinement"  value={refinedCount}  color="violet" />
+            <HealthTile label="精化"  value={refinedCount}  color="violet" />
             <HealthTile label="冲突"    value={conflictCount} color="rose" />
           </div>
           {(retiredCount + refinedCount + conflictCount) > 0 && (
@@ -177,6 +176,30 @@ export default function DevOverview() {
           </div>
         </Card>
       </div>
+
+      {/* 本地数据库状态（简易 JSON 数据库 + 副本复位） */}
+      <Card className="!bg-ink-900 text-ink-100 border-ink-800">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex-1 min-w-[260px]">
+            <p className="text-[11px] uppercase tracking-wider text-ink-400 font-semibold mb-1">数据存储</p>
+            <p className="text-[12.5px] text-ink-200 leading-relaxed">
+              种子副本 <span className="mono text-brand-300">data/db.json</span>（每次启动复位） → 运行时库
+              <span className="mono text-brand-300"> localStorage</span>（运行中可增删改查）
+            </p>
+            <p className="text-[11px] text-ink-400 mt-1">
+              当前场景 <span className="mono">{s.scenarioId}</span> · 版本 {s.globalVersion} · 本地规则 {localContracts.length} 条 ·
+              证据 {Object.keys(s.evidence).length} 条 · 变更集 {Object.keys(s.changeSets).length} 个
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="soft" size="sm" icon="Reset" onClick={async () => {
+              const { resetDb } = await import("../../data/db");
+              await resetDb();
+              location.reload();
+            }}>恢复默认数据</Button>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

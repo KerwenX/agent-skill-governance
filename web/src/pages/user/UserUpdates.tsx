@@ -39,11 +39,11 @@ export default function UserUpdates() {
       <div className="p-6 space-y-5">
         <div>
           <h1 className="text-[22px] font-bold text-ink-900">治理更新</h1>
-          <p className="text-[13px] text-ink-500 mt-0.5">Global changes affecting your local governance.</p>
+          <p className="text-[13px] text-ink-500 mt-0.5">影响你本地治理的全局变更。</p>
         </div>
 
         {updates.length === 0 && (
-          <Empty icon="Bell" title="No updates" body="When a global contract is published, impact analysis will appear here." />
+          <Empty icon="Bell" title="暂无更新" body="全局契约发布后，影响分析将出现在这里。" />
         )}
 
         <div className="space-y-3">

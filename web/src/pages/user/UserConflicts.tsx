@@ -169,9 +169,9 @@ export default function UserConflicts() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="mt-3 p-3 rounded-xl bg-brand-50 border border-brand-200">
             <p className="text-[12px] text-brand-900 mono space-y-0.5">
-              <span className="block">WHEN {contract.predicate.map(p => `${p.field}=${JSON.stringify(p.value)}`).join(" AND ")}</span>
-              <span className="block pl-4">AND {refineGuard.field}={JSON.stringify(refineGuard.value)}</span>
-              <span className="block">THEN {humanRelation({ ...contract.relations[0], type: "FALLBACK" }, skills)}</span>
+              <span className="block">当 {contract.predicate.map(p => `${p.field}=${JSON.stringify(p.value)}`).join(" AND ")}</span>
+              <span className="block pl-4">且 {refineGuard.field}={JSON.stringify(refineGuard.value)}</span>
+              <span className="block">则 {humanRelation({ ...contract.relations[0], type: "FALLBACK" }, skills)}</span>
             </p>
           </motion.div>
         )}

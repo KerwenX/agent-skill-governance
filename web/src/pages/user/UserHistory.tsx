@@ -16,13 +16,13 @@ export default function UserHistory() {
     <div className="h-full overflow-y-auto scroll-thin">
       <div className="p-6 space-y-5">
         <div>
-          <h1 className="text-[22px] font-bold text-ink-900">My 历史记录</h1>
-          <p className="text-[13px] text-ink-500 mt-0.5">Your 证据 and local governance activity.</p>
+          <h1 className="text-[22px] font-bold text-ink-900">我的历史记录</h1>
+          <p className="text-[13px] text-ink-500 mt-0.5">你的证据与本地治理活动记录。</p>
         </div>
         <div className="grid grid-cols-12 gap-5">
           <Card className="col-span-12 md:col-span-7">
-            <SectionTitle title="Recent 证据" />
-            {my证据.length === 0 && <Empty title="No 证据 yet" />}
+            <SectionTitle title="最近证据" />
+            {my证据.length === 0 && <Empty title="暂无证据" />}
             <div className="space-y-2">
               {my证据.map(e => (
                 <div key={e.id} className="p-3 rounded-lg border border-ink-200 bg-white">
@@ -36,8 +36,8 @@ export default function UserHistory() {
             </div>
           </Card>
           <Card className="col-span-12 md:col-span-5">
-            <SectionTitle title="Local 契约s" />
-            {myLocal.length === 0 && <Empty title="No local contracts" />}
+            <SectionTitle title="本地契约" />
+            {myLocal.length === 0 && <Empty title="暂无本地契约" />}
             <div className="space-y-2">
               {myLocal.map(c => (
                 <div key={c.id} className="p-3 rounded-lg border border-ink-200 bg-white">

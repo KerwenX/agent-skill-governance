@@ -6,12 +6,13 @@ import { Button, Card, Drawer, Empty, SectionTitle, StateBadge } from "../../com
 import { Icon } from "../../components/common/Icons";
 import { humanRelation } from "../../engines/governance";
 
-const TABS = ["生效中","待重验证","重验证中","生效中 Refinement","冲突","已退役"] as const;
+const TABS = ["生效中","待重验证","重验证中","精化中","冲突","已退役"] as const;
 
 export default function UserGovernance() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const localContracts = useGovernance(s => s.localContracts);
+  const deleteLocalContract = useGovernance(s => s.deleteLocalContract);
   const [tab, setTab] = React.useState<(typeof TABS)[number]>("生效中");
   const [selected, setSelected] = React.useState<string>();
 
@@ -23,7 +24,7 @@ export default function UserGovernance() {
     if (tab === "生效中") return c.state === "ACTIVE";
     if (tab === "待重验证") return c.state === "STALE";
     if (tab === "重验证中") return c.state === "REVALIDATING";
-    if (tab === "生效中 Refinement") return c.state === "ACTIVE_REFINEMENT";
+    if (tab === "精化中") return c.state === "ACTIVE_REFINEMENT";
     if (tab === "冲突") return c.state === "CONFLICT";
     if (tab === "已退役") return c.state === "RETIRED";
     return true;
@@ -39,10 +40,10 @@ export default function UserGovernance() {
         <div className="flex items-end justify-between">
           <div>
             <h1 className="text-[22px] font-bold text-ink-900">我的治理</h1>
-            <p className="text-[13px] text-ink-500 mt-0.5">Local contracts scoped to this user · lifecycle managed automatically.</p>
+            <p className="text-[13px] text-ink-500 mt-0.5">仅展示当前用户的本地规则，生命周期自动管理。</p>
           </div>
           <Button variant="primary" icon="Plus" onClick={() => navigate(`/user/${userId}/governance/new`)}>
-            New Local 规则
+            新建本地规则
           </Button>
         </div>
 
@@ -63,8 +64,8 @@ export default function UserGovernance() {
 
         <Card pad={false}>
           {filtered.length === 0 ? (
-            <Empty icon="Shield" title={`No ${tab.toLowerCase()} contracts`}
-                   body="本地规则s appear here after runtime 证据 is promoted to local governance." />
+            <Empty icon="Shield" title={`暂无${tab}的本地规则`}
+                   body="运行证据升级为本地治理后，本地规则将出现在这里。" />
           ) : (
             <table className="w-full text-[13px]">
               <thead>
@@ -74,6 +75,7 @@ export default function UserGovernance() {
                   <th className="px-4 py-2.5 font-semibold">父版本</th>
                   <th className="px-4 py-2.5 font-semibold">状态</th>
                   <th className="px-4 py-2.5 font-semibold">更新时间</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -96,6 +98,14 @@ export default function UserGovernance() {
                     </td>
                     <td className="px-4 py-3 text-[11.5px] text-ink-500 mono">
                       {new Date(c.updatedAt).toLocaleTimeString()}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        title="删除此本地规则（同步写入本地数据库）"
+                        onClick={e => { e.stopPropagation(); deleteLocalContract(c.id); }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors">
+                        <Icon name="Trash" size={12} /> 删除
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -120,7 +130,7 @@ export default function UserGovernance() {
             </div>
             <p className="text-[13px] text-ink-700">{selected契约.summary}</p>
 
-            <Section title="Predicate" />
+            <Section title="触发条件" />
             <div className="space-y-1">
               {selected契约.predicate.map((p, i) => (
                 <div key={i} className="text-[12.5px] mono bg-ink-50 border border-ink-100 rounded-lg px-3 py-1.5">
@@ -129,7 +139,7 @@ export default function UserGovernance() {
               ))}
             </div>
 
-            <Section title="Relations" />
+            <Section title="技能关系" />
             <div className="space-y-1">
               {selected契约.relations.map((r, i) => (
                 <div key={i} className="text-[12.5px] mono bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-3 py-1.5">
@@ -169,7 +179,7 @@ export default function UserGovernance() {
 }
 
 function stateTab(s: string) {
-  if (s === "ACTIVE_REFINEMENT") return "生效中 Refinement";
+  if (s === "ACTIVE_REFINEMENT") return "精化中";
   if (s === "RETIRED") return "已退役";
   if (s === "STALE") return "待重验证";
   if (s === "REVALIDATING") return "重验证中";

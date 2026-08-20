@@ -90,12 +90,12 @@ export default function DevContractEditor() {
           <SectionTitle icon="Git" title="版本预览" />
           <div className="flex items-center gap-3 text-center">
             <div className="flex-1 p-3 rounded-xl bg-ink-50 border border-ink-100">
-              <p className="text-[10.5px] uppercase tracking-wider text-ink-500">From</p>
+              <p className="text-[10.5px] uppercase tracking-wider text-ink-500">从</p>
               <p className="text-[20px] font-bold mono text-ink-700">{fromVer}</p>
             </div>
             <Icon name="ArrowR" size={18} className="text-ink-400" />
             <div className="flex-1 p-3 rounded-xl bg-brand-50 border border-brand-200">
-              <p className="text-[10.5px] uppercase tracking-wider text-brand-700">To</p>
+              <p className="text-[10.5px] uppercase tracking-wider text-brand-700">至</p>
               <p className="text-[20px] font-bold mono text-brand-800">{toVer}</p>
             </div>
           </div>

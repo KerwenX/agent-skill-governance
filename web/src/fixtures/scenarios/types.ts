@@ -62,6 +62,25 @@ export interface ScenarioPublishProfile {
   outcomes: Record<string, "RETIRED" | "ACTIVE_REFINEMENT" | "CONFLICT">;
 }
 
+/**
+ * Historical seed data so both surfaces look like a live system when opened
+ * directly (without the demo console). Must NOT share cluster keys with the
+ * scenario's runtime tasks, otherwise the guided demo's aggregation numbers shift.
+ */
+export interface ScenarioSeed {
+  evidence: import("../../domain/types").LocalEvidence[];
+  clusters: import("../../domain/types").EvidenceCluster[];
+  candidates: import("../../domain/types").GlobalGovernanceCandidate[];
+  changeSets: import("../../domain/types").GlobalChangeSet[];
+  notifications?: {
+    kind: "info" | "success" | "warn" | "danger";
+    title: string;
+    body?: string;
+    read?: boolean;
+    ageDays?: number;
+  }[];
+}
+
 export interface ScenarioConfig {
   id: string;
   index: number;
@@ -83,4 +102,6 @@ export interface ScenarioConfig {
   /** Map taskId -> evidence profile (same task per user, profiles differ by user via key). */
   evidence(task: ScenarioTask, userId: string): ScenarioEvidenceProfile;
   publishes: ScenarioPublishProfile[];
+  /** Historical evidence/clusters/changes so direct entry shows a live system. */
+  seed?: ScenarioSeed;
 }
