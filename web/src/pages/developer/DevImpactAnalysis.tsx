@@ -5,8 +5,9 @@ import { useGovernance } from "../../store/governance";
 import { Button, Card, Empty, SectionTitle, StateBadge } from "../../components/common/UI";
 import { Icon } from "../../components/common/Icons";
 import { AnimatedNumber } from "../../components/common/UI";
-import { buildChangeSet, findAffectedContracts } from "../../engines/dependency";
+import { findAffectedContracts } from "../../engines/dependency";
 import { humanRelation } from "../../engines/governance";
+import { buildPublish } from "../../engines/publishing";
 
 export default function DevImpactAnalysis() {
   const { draftId } = useParams();
@@ -24,23 +25,16 @@ export default function DevImpactAnalysis() {
   const cluster = candidate ? s.clusters[candidate.clusterId] : undefined;
 
   const allLocals = Object.values(s.localContracts);
-  const toVer = incrementVersion(s.globalVersion);
 
-  // Build a preview change set
-  const changeSet = React.useMemo(() => {
-    if (!candidate || !cluster) return null;
-    return buildChangeSet(
-      s.globalVersion, toVer,
-      {
-        id: "DRAFT", domain: "GLOBAL", contractType: candidate.proposedType, state: "ACTIVE",
-        title: "draft", summary: "", predicate: candidate.proposedPredicate,
-        relations: [candidate.proposedRelation], scope: { taskTypes: ["official_filing"] },
-        overridePermission: true, originEvidenceIds: cluster.evidenceIds,
-        parentVersion: s.globalVersion, createdAt: Date.now(), updatedAt: Date.now(),
-      },
-      [],
-    );
-  }, [candidate, cluster, s.globalVersion, toVer]);
+  // Build a preview publish (draft contract + change set) from the scenario profile.
+  const pub = React.useMemo(
+    () => (candidate ? buildPublish(s, candidate) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [candidate, s.globalVersion, s.localContracts, s.globalContracts],
+  );
+  const changeSet = pub?.changeSet ?? null;
+  const toVer = pub?.changeSet.toVersion ?? "";
+  const draft = pub?.contract;
 
   const affected = React.useMemo(
     () => changeSet ? findAffectedContracts(changeSet, allLocals) : [],
@@ -62,10 +56,14 @@ export default function DevImpactAnalysis() {
     setScanning(false); setDone(true);
   };
 
-  if (!changeSet || !candidate) {
-    return <Empty title="No draft to analyze" body="批准 a candidate to run impact analysis."
-      cta={<Button onClick={() => navigate("/developer/inbox")}>Go to Inbox</Button>} />;
+  if (!changeSet || !candidate || !draft) {
+    return <Empty title="没有可分析的草案" body="请先批准一条候选规则，再运行影响分析。"
+      cta={<Button onClick={() => navigate("/developer/inbox")}>返回收件箱</Button>} />;
   }
+  const diffLines = [
+    ...draft.predicate.map(p => `WHEN ${p.field} ${p.operator.toLowerCase().replace("_"," ")} ${JSON.stringify(p.value)}`),
+    ...draft.relations.map(r => `THEN ${humanRelation(r, s.skills)}`),
+  ];
 
   return (
     <div className="space-y-5">
@@ -88,17 +86,13 @@ export default function DevImpactAnalysis() {
 
       <div className="grid grid-cols-12 gap-5">
         <Card className="col-span-12 lg:col-span-5">
-          <SectionTitle icon="FileCode" title="Version Diff" />
+          <SectionTitle icon="FileCode" title="版本差异" />
           <div className="rounded-xl border border-ink-200 overflow-hidden font-mono text-[12.5px]">
-            <div className="px-3 py-1.5 bg-emerald-50/70 text-emerald-800">
-              <span className="opacity-70">+</span> WHEN taskType = official_filing
-            </div>
-            <div className="px-3 py-1.5 bg-emerald-50/70 text-emerald-800">
-              <span className="opacity-70">+</span> AND sourceRequirement = official
-            </div>
-            <div className="px-3 py-1.5 bg-emerald-50/70 text-emerald-800">
-              <span className="opacity-70">+</span> THEN {humanRelation(candidate.proposedRelation)}
-            </div>
+            {diffLines.map((line, i) => (
+              <div key={i} className="px-3 py-1.5 bg-emerald-50/70 text-emerald-800">
+                <span className="opacity-70">+</span> {line}
+              </div>
+            ))}
           </div>
         </Card>
 
@@ -204,7 +198,4 @@ export default function DevImpactAnalysis() {
 function label(cat: string) {
   return { ParentContract: "父版本 契约", SkillVersion: "Skill Version",
            Relationship: "Relationship", ContextSchema: "Context Schema" }[cat] ?? cat;
-}
-function incrementVersion(v: string) {
-  return `v${parseInt(v.replace("v",""), 10) + 1}`;
 }

@@ -78,7 +78,7 @@ export function buildChangeSet(
     id: `DELTA-${toVer.replace("v","")}`,
     fromVersion: fromVer,
     toVersion: toVer,
-    changedContracts: [newContract.id, ...(newContract.id !== "GC-1014" ? [] : [])],
+    changedContracts: [newContract.id],
     changedSkills,
     changedRelationships: newContract.relations,
     changedContextSchemas: newContract.scope.taskTypes ?? [],

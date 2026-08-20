@@ -44,10 +44,22 @@ export function candidateFromCluster(cluster: EvidenceCluster, ev: LocalEvidence
   };
 }
 
-export function contractFromCandidate(cand: GlobalGovernanceCandidate, cluster: EvidenceCluster): GovernanceContract {
+export function contractFromCandidate(
+  cand: GlobalGovernanceCandidate,
+  cluster: EvidenceCluster,
+  fromVersion: string,
+  skillNames?: Record<string, string>,
+): GovernanceContract {
+  const s = cand.proposedRelation.sourceSkillId;
+  const t = cand.proposedRelation.targetSkillId;
+  const sn = (id?: string) => id ? (skillNames?.[id] ?? id.replace(/^skill-/, "")) : "";
   const title = cand.proposedRelation.type === "PRIORITY"
-    ? `Official filing: ${skillName(cand.proposedRelation.sourceSkillId)} > ${skillName(cand.proposedRelation.targetSkillId)}`
-    : `${cand.proposedRelation.type} relation`;
+    ? `${sn(s)} > ${sn(t)}`
+    : cand.proposedRelation.type === "ORDER"
+      ? `${sn(s)} → ${sn(t)}`
+      : cand.proposedRelation.type === "FALLBACK"
+        ? `${sn(s)} ↘ ${sn(t)}`
+        : `${cand.proposedRelation.type}: ${sn(s)}`;
   return {
     id: nextContractId("GLOBAL"),
     domain: "GLOBAL",
@@ -60,26 +72,19 @@ export function contractFromCandidate(cand: GlobalGovernanceCandidate, cluster: 
     scope: { taskTypes: [String(cand.proposedPredicate[0]?.value ?? "*")] },
     overridePermission: cand.proposedType === "INVARIANT" ? false : true,
     originEvidenceIds: cluster.evidenceIds,
-    parentVersion: "v18",
+    parentVersion: fromVersion,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
 }
 
-function skillName(id?: string) {
-  const map: Record<string,string> = {
-    "skill-web-search": "WebSearch",
-    "skill-ir-search": "IRSearch",
-    "skill-pdf-extraction": "PDFExtraction",
-    "skill-ocr": "OCR",
-    "skill-internal-finance": "InternalFinancialDB",
-    "skill-stock-query": "StockQuery",
-    "skill-cache-market": "CachedQuote",
-  };
-  return id ? (map[id] ?? id) : "";
+/** Build a short human-readable skill label from a skill map. */
+export function skillName(id: string | undefined, skills?: Record<string, { name?: string }>): string {
+  if (!id) return "";
+  return skills?.[id]?.name ?? id.replace(/^skill-/, "");
 }
 
-export function buildLocalContractFromEvidence(ev: LocalEvidence): GovernanceContract {
+export function buildLocalContractFromEvidence(ev: LocalEvidence, parentContractId = "GC-1000"): GovernanceContract {
   const res: GovernanceResolution = ev.localResolution ?? {
     type: "SKILL_PRIORITY", description: "Local rule", rationale: [],
   };
@@ -89,10 +94,11 @@ export function buildLocalContractFromEvidence(ev: LocalEvidence): GovernanceCon
   if (ev.context.sourceRequirement) {
     predicate.push({ field: "sourceRequirement", operator: "EQUALS", value: ev.context.sourceRequirement });
   }
-  // User B-specific: carry internal_resource into local-specific condition
-  if (ev.userId === "user-b" && ev.context.taskType === "official_filing") {
-    predicate.push({ field: "internal_resource", operator: "EQUALS", value: true });
-  }
+  for (const p of ev.localPredicates ?? []) predicate.push(p);
+  const contextSchemas = [
+    ev.context.taskType ?? "*",
+    ...predicate.slice(1).map(p => p.field),
+  ];
   return {
     id: nextContractId("LOCAL"),
     domain: "LOCAL",
@@ -104,12 +110,13 @@ export function buildLocalContractFromEvidence(ev: LocalEvidence): GovernanceCon
     predicate,
     relations: [ev.skillRelation],
     scope: { userIds: [ev.userId] },
-    overridePermission: true,
+    // PERMISSION/ISOLATION evidence must not relax global invariants
+    overridePermission: ev.skillRelation.type !== "PERMISSION" && ev.skillRelation.type !== "ISOLATION",
     dependencies: {
-      parentContractId: "GC-1014",
+      parentContractId,
       skillVersions: { ...ev.skillVersions },
       relationships: [ev.skillRelation],
-      contextSchemas: [ev.context.taskType ?? "*"],
+      contextSchemas,
     },
     originEvidenceIds: [ev.id],
     parentVersion: ev.parentGlobalVersion,
@@ -128,23 +135,35 @@ export function resolveGovernance(
   localRefinements: GovernanceContract[],
   ctx: Record<string, unknown>,
   candidates: SkillCandidate[],
+  skillPermissions: Record<string, string[]> = {},
 ): SkillCandidate[] {
-  // 1) Enforce invariants (permissions, hard exclusions)
+  const perms = new Set(Array.isArray(ctx.permission) ? (ctx.permission as string[]) : []);
+
+  const blocked = (skillId: string, rel: SkillRelation): boolean => {
+    if (rel.type === "PERMISSION") {
+      // A relation predicate may declare required permissions (permission IN [...]).
+      const required = rel.predicate?.operator === "IN"
+        ? (rel.predicate.value as string[])
+        : (skillPermissions[skillId] ?? []);
+      return required.length > 0 && !required.some(p => perms.has(p));
+    }
+    return false;
+  };
+
+  // 1) Enforce invariants (permissions, hard exclusions, isolation)
   for (const inv of globalInvariants) {
     if (!matchAll(inv.predicate, ctx)) continue;
     for (const rel of inv.relations) {
-      if (rel.type === "PERMISSION") {
-        // zero-out the skill if permission missing
-        const c = candidates.find(cc => cc.skillId === rel.sourceSkillId);
-        if (c && !hasPermission(ctx, rel.sourceSkillId)) c.finalScore = 0;
+      const c = candidates.find(cc => cc.skillId === rel.sourceSkillId);
+      if (rel.type === "PERMISSION" && c && blocked(rel.sourceSkillId, rel)) {
+        c.finalScore = 0; c.reason = [...c.reason, `Blocked by ${inv.id}: missing permission`];
       }
       if (rel.type === "EXCLUSION") {
-        const a = candidates.find(cc => cc.skillId === rel.sourceSkillId);
         const b = candidates.find(cc => cc.skillId === rel.targetSkillId);
-        if (a && b) {
-          if (a.plannerScore >= b.plannerScore) b.finalScore = 0;
-          else a.finalScore = 0;
-        }
+        if (b) { b.finalScore = 0; b.reason = [...b.reason, `Excluded by ${inv.id}`]; }
+      }
+      if (rel.type === "ISOLATION" && c) {
+        c.finalScore = 0; c.reason = [...c.reason, `Isolated by ${inv.id}`];
       }
     }
   }
@@ -152,7 +171,7 @@ export function resolveGovernance(
   // 2) Resolve defaults vs local refinements by specificity
   const scored = candidates.map(c => {
     let bonus = 0;
-    let reasons: string[] = [];
+    const reasons: string[] = [];
     for (const d of globalDefaults) {
       if (!matchAll(d.predicate, ctx)) continue;
       for (const rel of d.relations) {
@@ -160,7 +179,13 @@ export function resolveGovernance(
           bonus += 0.22; reasons.push(`Global ${d.id}: +0.22`);
         }
         if (rel.type === "PRIORITY" && rel.targetSkillId === c.skillId) {
-          bonus -= 0.20; reasons.push(`Global ${d.id}: -0.20 (deprioritized)`);
+          bonus -= 0.20; reasons.push(`Global ${d.id}: -0.20`);
+        }
+        if (rel.type === "FALLBACK" && rel.targetSkillId === c.skillId) {
+          bonus -= 0.10; reasons.push(`Global ${d.id}: fallback (deprioritized)`);
+        }
+        if (rel.type === "ORDER" && rel.sourceSkillId === c.skillId) {
+          bonus += 0.30; reasons.push(`Global ${d.id}: ordered first`);
         }
         if (rel.type === "EXCLUSION" && rel.targetSkillId === c.skillId) {
           bonus -= 0.5; reasons.push(`Global ${d.id}: excluded`);
@@ -176,22 +201,21 @@ export function resolveGovernance(
         if (rel.type === "PRIORITY" && rel.targetSkillId === c.skillId) {
           bonus -= 0.30; reasons.push(`Local ${l.id}: -0.30`);
         }
+        if (rel.type === "ORDER" && rel.sourceSkillId === c.skillId) {
+          bonus += 0.12; reasons.push(`Local ${l.id}: ordered first`);
+        }
+        if (rel.type === "FALLBACK" && rel.targetSkillId === c.skillId) {
+          bonus -= 0.08; reasons.push(`Local ${l.id}: fallback`);
+        }
         if (rel.type === "EXCLUSION" && rel.targetSkillId === c.skillId) {
           bonus -= 0.6; reasons.push(`Local ${l.id}: excluded`);
         }
       }
     }
-    return { ...c, governanceBonus: +(bonus).toFixed(2), reason: reasons, finalScore: clamp(c.plannerScore + bonus) };
+    return { ...c, governanceBonus: +(bonus).toFixed(2), reason: [...c.reason, ...reasons], finalScore: c.finalScore > 0 ? clamp(c.plannerScore + bonus) : 0 };
   });
 
   return scored;
-}
-
-function hasPermission(ctx: Record<string, unknown>, skillId: string): boolean {
-  if (skillId === "skill-internal-finance") {
-    return Array.isArray(ctx.permission) && (ctx.permission as string[]).includes("finance:read");
-  }
-  return true;
 }
 
 function matchAll(preds: GovernancePredicate[], ctx: Record<string, unknown>): boolean {
@@ -213,9 +237,9 @@ function clamp(n: number) { return Math.max(0, Math.min(1, +n.toFixed(2))); }
 export function humanPredicate(p: GovernancePredicate): string {
   return `${p.field} ${p.operator.toLowerCase().replace("_"," ")} ${JSON.stringify(p.value)}`;
 }
-export function humanRelation(r: SkillRelation): string {
-  const s = skillName(r.sourceSkillId);
-  const t = skillName(r.targetSkillId);
+export function humanRelation(r: SkillRelation, skills?: Record<string, { name?: string }>): string {
+  const s = skillName(r.sourceSkillId, skills);
+  const t = skillName(r.targetSkillId, skills);
   switch (r.type) {
     case "PRIORITY": return `${s} > ${t}`;
     case "ORDER":    return `${s} → ${t}`;

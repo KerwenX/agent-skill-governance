@@ -13,6 +13,8 @@ export interface Skill {
   capabilities: string[];
   status: SkillStatus;
   provider: string;
+  /** Permissions a session must hold (any-of) for this skill to be callable. */
+  requiredPermissions?: string[];
 }
 
 export type GovernancePredicateOperator =
@@ -89,6 +91,7 @@ export interface RuntimeEvidenceItem {
 
 export interface RuntimeExecution {
   id: string;
+  scenarioId: string;
   userId: string;
   agentId: string;
   input: string;
@@ -102,6 +105,8 @@ export interface RuntimeExecution {
   completedAt?: number;
   anomalyReason?: string;
   resultSnippets?: { title: string; source: string; official: boolean }[];
+  /** Carries the scenario evidence profile from runtime to evidence builder. */
+  evidenceProfile?: import("../engines/evidence").EvidenceProfile;
 }
 
 export type LocalEvidenceState =
@@ -137,6 +142,8 @@ export interface LocalEvidence {
   skillVersions: Record<string, string>;
   state: LocalEvidenceState;
   qualityScore: number;
+  /** User-specific predicates that should carry into the Local Contract (scenario-driven). */
+  localPredicates?: GovernancePredicate[];
   createdAt: number;
 }
 
@@ -234,6 +241,8 @@ export interface GlobalChangeSet {
     refined: string[];
     conflicted: string[];
   };
+  /** Scenario-preset per-contract outcome, used as deterministic override. */
+  outcomeOverrides?: Record<string, RevalidationOutcome>;
   createdAt: number;
 }
 
@@ -282,6 +291,9 @@ export type GovernanceEventType =
   | "LOCAL_CONTRACT_RETIRED"
   | "LOCAL_CONTRACT_REFINED"
   | "LOCAL_CONTRACT_CONFLICTED"
+  | "SCENARIO_CHANGED"
+  | "SKILL_UPGRADED"
+  | "PERMISSIONS_CHANGED"
   | "DEMO_RESET"
   | "DEMO_COMMAND";
 

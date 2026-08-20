@@ -4,11 +4,8 @@ import { useGovernance } from "../../store/governance";
 import { Button, Card, SectionTitle, StateBadge } from "../../components/common/UI";
 import { Icon } from "../../components/common/Icons";
 import { GovernanceDiff } from "../../components/animations/Animations";
-import { contractFromCandidate, humanRelation, nextChangeSetId } from "../../engines/governance";
-import { buildChangeSet, findAffectedContracts } from "../../engines/dependency";
-import { revalidate } from "../../engines/revalidation";
-import { eventBus, nextId } from "../../app/eventBus";
-import type { GovernanceEvent } from "../../domain/types";
+import { humanRelation } from "../../engines/governance";
+import { buildPublish, applyPublish } from "../../engines/publishing";
 
 export default function DevContractEditor() {
   const navigate = useNavigate();
@@ -19,163 +16,78 @@ export default function DevContractEditor() {
   const candidate = candidateId ? s.candidates[candidateId] : undefined;
   const cluster = candidate ? s.clusters[candidate.clusterId] : undefined;
 
-  const [overridePolicy, setOverridePolicy] = React.useState<"FORBIDDEN" | "ALLOWED">("FORBIDDEN");
   const [publishing, setPublishing] = React.useState(false);
 
-  if (!candidate || !cluster) {
+  const pub = React.useMemo(
+    () => (candidate ? buildPublish(s, candidate) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [candidate, s.globalVersion, s.localContracts, s.globalContracts],
+  );
+
+  if (!candidate || !cluster || !pub) {
     return (
       <Card>
-        <p className="text-[13px] text-ink-600">No candidate selected. 批准 a candidate first.</p>
+        <p className="text-[13px] text-ink-600">没有可发布的候选规则。请先在收件箱批准一条候选。</p>
         <Button className="mt-2" onClick={() => navigate("/developer/inbox")}>返回收件箱</Button>
       </Card>
     );
   }
 
-  // Build a draft global contract (NOT yet in store)
-  const draft = contractFromCandidate(candidate, cluster);
-  if (candidate.proposedType === "INVARIANT") {
-    draft.overridePermission = false;
-  }
-
-  const fromVer = s.globalVersion;
-  const toVer = incrementVersion(s.globalVersion);
-  draft.parentVersion = fromVer;
-
-  // Preview impact by running dependency engine on ALL local contracts in memory
-  // (we only store a representative subset; platform count is displayed via stats)
-  const allLocals = Object.values(s.localContracts);
-  const affected = findAffectedContracts({
-    id: "PREVIEW",
-    fromVersion: fromVer,
-    toVersion: toVer,
-    changedContracts: [draft.id, "GC-1014"],
-    changedSkills: [],
-    changedRelationships: draft.relations,
-    changedContextSchemas: draft.scope.taskTypes ?? [],
-    affectedContractIds: [],
-    createdAt: Date.now(),
-  }, allLocals);
+  const { contract: draft, changeSet: preview } = pub;
+  const fromVer = preview.fromVersion;
+  const toVer = preview.toVersion;
+  const affectedCount = preview.affectedContractIds.length;
 
   const publish = async () => {
     setPublishing(true);
-    const final契约 = { ...draft, id: draft.id, state: "ACTIVE" as const, createdAt: Date.now(), updatedAt: Date.now() };
-
-    // Run revalidation on each affected local
-    const retired: string[] = []; const refined: string[] = []; const conflicted: string[] = [];
-    const revalidations = affected.map(a => {
-      const r = revalidate(a.contract, [final契约, ...Object.values(s.globalContracts)], {
-        id: "PREVIEW", fromVersion: fromVer, toVersion: toVer,
-        changedContracts: [final契约.id], changedSkills: [],
-        changedRelationships: final契约.relations,
-        changedContextSchemas: final契约.scope.taskTypes ?? [],
-        affectedContractIds: [], createdAt: Date.now(),
-      }, { taskType: "official_filing" });
-      if (r.result === "RETIRED") retired.push(a.contract.id);
-      if (r.result === "ACTIVE_REFINEMENT") refined.push(a.contract.id);
-      if (r.result === "CONFLICT") conflicted.push(a.contract.id);
-      return { contractId: a.contract.id, result: r };
-    });
-
-    const changeSet = buildChangeSet(fromVer, toVer, final契约, affected);
-    changeSet.revalidation = { retired, refined, conflicted };
-    changeSet.id = nextChangeSetId(toVer);
-
-    s.addGlobalContract(final契约);
-    s.addChangeSet(changeSet);
-
-    // Mark affected locals stale
-    for (const a of affected) {
-      s.updateLocalContract(a.contract.id, { state: "STALE" });
-    }
-
-    // Update candidate
-    s.upsertCandidate({ ...candidate, state: "PUBLISHED", publishedContractId: final契约.id });
-
-    // Broadcast
-    const payload = { changeSetId: changeSet.id };
-    const evt: GovernanceEvent = {
-      eventId: nextId("evt"), eventType: "GLOBAL_CONTRACT_PUBLISHED",
-      timestamp: Date.now(), sourceDomain: "DEVELOPER", sourceId: eventBus.id,
-      targetDomain: "ALL", correlationId: nextId("corr"),
-      globalVersion: toVer, payload,
-    };
-    s.emit(evt);
-    s.emit({
-      ...evt, eventId: nextId("evt"), eventType: "GLOBAL_CHANGESET_CREATED",
-      payload: { changeSet, global契约: final契约 },
-    });
-
-    // Apply revalidation results (locally) — the user windows will also run their own when they receive the event.
-    for (const id of retired)   s.updateLocalContract(id, { state: "RETIRED" });
-    for (const id of refined)  s.updateLocalContract(id, { state: "ACTIVE_REFINEMENT" });
-    for (const id of conflicted) s.updateLocalContract(id, { state: "CONFLICT" });
-
-    // Navigate to propagation monitor
-    navigate(`/developer/propagation/${changeSet.id}`);
+    applyPublish(s, pub, candidate);
+    navigate(`/developer/propagation/${preview.id}`);
   };
 
+  const diffLines = [
+    ...draft.predicate.map(p => ({ sign: "+" as const, text: `WHEN ${p.field} ${p.operator.toLowerCase().replace("_"," ")} ${JSON.stringify(p.value)}` })),
+    ...draft.relations.map(r => ({ sign: "+" as const, text: `THEN ${humanRelation(r, s.skills)}` })),
+  ];
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-2 text-[12.5px] text-ink-500">
+    <div className="h-full flex flex-col gap-4">
+      <div className="flex items-center gap-2 text-[12.5px] text-ink-500 shrink-0">
         <button className="link-quiet" onClick={() => navigate(-1)}>返回</button>
-        <Icon name="ChevronR" size={12} /> <span>New Global 契约</span>
+        <Icon name="ChevronR" size={12} /> <span>发布全局契约</span>
       </div>
-      <div className="flex items-end justify-between">
+      <div className="flex items-end justify-between shrink-0">
         <div>
-          <h1 className="text-[22px] font-bold text-ink-900">Global 契约 Editor</h1>
-          <p className="text-[13px] text-ink-500 mt-0.5">Candidate {candidate.id} · cluster {cluster.id}</p>
+          <h1 className="text-[20px] font-bold text-ink-900">全局契约编辑器</h1>
+          <p className="text-[12.5px] text-ink-500 mt-0.5">Candidate {candidate.id} · cluster {cluster.id}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <StateBadge state={candidate.state} />
-        </div>
+        <StateBadge state={candidate.state} />
       </div>
 
-      <div className="grid grid-cols-12 gap-5">
-        <Card className="col-span-12 lg:col-span-7 space-y-4">
-          <SectionTitle icon="FileCode" title="Governance 规则" />
+      <div className="flex-1 min-h-0 grid grid-cols-12 gap-4">
+        <Card className="col-span-12 lg:col-span-7 flex flex-col gap-3 min-h-0 overflow-y-auto scroll-thin">
+          <SectionTitle icon="FileCode" title="治理规则" />
           <div>
-            <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">规则 class</p>
+            <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">规则等级</p>
             <div className="flex items-center gap-2">
-              <span className={`chip ${candidate.proposedType === "DEFAULT" ? "chip-brand" : "chip-rose"}`}>
-                {candidate.proposedType === "DEFAULT" ? "Global Default" : "Global Invariant"}
+              <span className={`chip ${draft.contractType === "DEFAULT" ? "chip-brand" : "chip-rose"}`}>
+                {draft.contractType === "DEFAULT" ? "Global Default" : "Global Invariant"}
               </span>
               <span className="text-[12px] text-ink-500">
-                {candidate.proposedType === "DEFAULT"
-                  ? "Locals may refine with context-specific conditions."
-                  : "Locals cannot relax this constraint (overridePermission=false)."}
+                {draft.contractType === "DEFAULT"
+                  ? "本地契约可用上下文条件细化。"
+                  : "本地契约不可放宽此约束（overridePermission=false）。"}
               </span>
             </div>
           </div>
-
-          <GovernanceDiff
-            lines={[
-              { sign: "+", text: `WHEN taskType = ${candidate.proposedPredicate.find(p => p.field === "taskType")?.value ?? "*"}` },
-              { sign: "+", text: `AND sourceRequirement = official` },
-              { sign: "+", text: `THEN ${humanRelation(candidate.proposedRelation)}` },
-            ]}
-          />
-
-          {candidate.proposedType === "INVARIANT" && (
-            <div>
-              <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">
-                Local Override Policy
-              </p>
-              <div className="space-y-1.5">
-                {(["FORBIDDEN", "ALLOWED"] as const).map(p => (
-                  <label key={p} className="flex items-center gap-2 p-2 rounded-lg border border-ink-200 cursor-pointer">
-                    <input type="radio" checked={overridePolicy === p} readOnly className="accent-brand-600" />
-                    <span className="text-[12.5px] text-ink-800">
-                      {p === "FORBIDDEN" ? "Forbidden — locals cannot relax" : "全部owed with conditions"}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
+          <GovernanceDiff lines={diffLines} />
+          <div>
+            <p className="text-[11.5px] uppercase tracking-wider text-ink-500 font-semibold mb-1.5">规则摘要</p>
+            <p className="text-[12.5px] text-ink-700">{draft.summary}</p>
+          </div>
         </Card>
 
-        <Card className="col-span-12 lg:col-span-5 space-y-3">
-          <SectionTitle icon="Git" title="Version Preview" />
+        <Card className="col-span-12 lg:col-span-5 flex flex-col gap-3 min-h-0">
+          <SectionTitle icon="Git" title="版本预览" />
           <div className="flex items-center gap-3 text-center">
             <div className="flex-1 p-3 rounded-xl bg-ink-50 border border-ink-100">
               <p className="text-[10.5px] uppercase tracking-wider text-ink-500">From</p>
@@ -187,28 +99,38 @@ export default function DevContractEditor() {
               <p className="text-[20px] font-bold mono text-brand-800">{toVer}</p>
             </div>
           </div>
-          <SectionTitle icon="Network" title="Impact Summary" className="!mt-5" />
+          <SectionTitle icon="Network" title="影响摘要" className="!mt-2" />
           <div className="grid grid-cols-2 gap-2 text-[12.5px]">
-            <Impact label="Affected" value={affected.length} color="text-amber-700 bg-amber-50 border-amber-200" />
-            <Impact label="Unaffected" value={s.platformStats.localContractsObserved - affected.length} color="text-emerald-700 bg-emerald-50 border-emerald-200" />
+            <Impact label="受影响" value={affectedCount} color="text-amber-700 bg-amber-50 border-amber-200" />
+            <Impact label="未受影响" value={s.platformStats.localContractsObserved - affectedCount} color="text-emerald-700 bg-emerald-50 border-emerald-200" />
           </div>
-          <ul className="text-[12px] text-ink-600 mt-2 space-y-1 list-disc pl-4">
-            {affected.slice(0, 5).map(a => (
-              <li key={a.contract.id} className="mono">
-                {a.contract.id} <span className="text-ink-400">· {a.reasons.join(", ")}</span>
-              </li>
-            ))}
-            {affected.length > 5 && <li className="text-ink-400">… and {affected.length - 5} more</li>}
-          </ul>
+          {preview.changedSkills.length > 0 && (
+            <div className="text-[11.5px] text-ink-600">
+              <span className="font-semibold">技能版本变更：</span>
+              {preview.changedSkills.join(", ")}
+            </div>
+          )}
+          <div className="flex-1 min-h-0 overflow-y-auto scroll-thin">
+            <ul className="text-[12px] text-ink-600 space-y-1 list-disc pl-4">
+              {Object.values(s.localContracts)
+                .filter(l => preview.affectedContractIds.includes(l.id))
+                .slice(0, 6)
+                .map(l => (
+                  <li key={l.id} className="mono">
+                    {l.id} <span className="text-ink-400">· {l.title}</span>
+                  </li>
+                ))}
+              {affectedCount === 0 && <li className="text-ink-400 list-none">无受影响本地契约。</li>}
+            </ul>
+          </div>
         </Card>
       </div>
 
-      <div className="sticky bottom-4 card p-3 flex items-center gap-2 shadow-pop">
+      <div className="shrink-0 card p-3 flex items-center gap-2 shadow-pop">
         <Button variant="ghost" onClick={() => navigate(-1)}>取消</Button>
         <div className="ml-auto" />
-        <Button variant="outline">Save Draft</Button>
         <Button variant="primary" icon="Bolt" onClick={publish} disabled={publishing}>
-          {publishing ? "Publishing…" : `Publish ${toVer}`}
+          {publishing ? "发布中…" : `发布 ${toVer}`}
         </Button>
       </div>
     </div>
@@ -221,8 +143,3 @@ const Impact: React.FC<{ label: string; value: number; color: string }> = ({ lab
     <p className="text-[20px] font-bold mono leading-none mt-1">{value.toLocaleString()}</p>
   </div>
 );
-
-function incrementVersion(v: string) {
-  const n = parseInt(v.replace("v",""), 10);
-  return `v${n + 1}`;
-}

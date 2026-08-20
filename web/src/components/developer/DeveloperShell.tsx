@@ -1,10 +1,11 @@
 import React from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGovernance } from "../../store/governance";
 import { Icon, IconName } from "../common/Icons";
 import { StateBadge } from "../common/UI";
 import { useDevDemoCommands } from "../../hooks/useDemoCommands";
+import ScenarioSwitcher from "../common/ScenarioSwitcher";
 
 const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: "/developer",           label: "治理总览",       icon: "Pulse"   },
@@ -18,8 +19,10 @@ const NAV: { to: string; label: string; icon: IconName }[] = [
 
 export default function DeveloperShell() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const init = useGovernance(s => s.init);
-  React.useEffect(() => { init("developer"); }, [init]);
+  const initialScenario = React.useRef(params.get("scenario"));
+  React.useEffect(() => { init("developer", undefined, initialScenario.current ?? undefined); }, [init]);
   useDevDemoCommands();
   const globalVersion = useGovernance(s => s.globalVersion);
   const inbox = useGovernance(s => s.evidenceInboxCount);
@@ -70,12 +73,13 @@ export default function DeveloperShell() {
 
       {/* Main */}
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="h-16 shrink-0 bg-white border-b border-ink-200 flex items-center px-6 gap-4">
-          <div className="flex items-center gap-2 text-[12.5px] text-ink-500">
+        <header className="h-14 shrink-0 bg-white border-b border-ink-200 flex items-center px-5 gap-4">
+          <div className="flex items-center gap-2 text-[12px] text-ink-500">
             <span className="chip chip-brand mono">{globalVersion}</span>
-            <span>跨窗口实时同步已启用</span>
+            <span className="hidden md:inline">跨窗口实时同步</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           </div>
+          <div className="ml-4"><ScenarioSwitcher /></div>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => { setBellOpen(v => !v); markRead(); }}
@@ -92,8 +96,10 @@ export default function DeveloperShell() {
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-violet-500 flex items-center justify-center text-white text-[12px] font-bold">D</div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto scroll-thin p-6">
-          <Outlet />
+        <main className="flex-1 min-h-0 overflow-hidden p-4">
+          <div className="h-full overflow-y-auto scroll-thin pr-1">
+            <Outlet />
+          </div>
         </main>
       </div>
 

@@ -1,12 +1,14 @@
 import React from "react";
-import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useGovernance } from "../../store/governance";
 import { useUserRevalidation } from "../../hooks/useUserRevalidation";
 import { eventBus } from "../../app/eventBus";
 import { Icon, IconName } from "../common/Icons";
+import ScenarioSwitcher from "../common/ScenarioSwitcher";
 
 export default function UserShell() {
   const { userId } = useParams();
+  const [params] = useSearchParams();
   const navigate = useNavigate();
   const init = useGovernance(s => s.init);
   const user = useGovernance(s => (userId ? s.users[userId] : undefined));
@@ -16,7 +18,8 @@ export default function UserShell() {
   const [collapsed, setCollapsed] = React.useState(false);
   const [mobileNav, setMobileNav] = React.useState(false);
 
-  React.useEffect(() => { if (userId) init("user", userId); }, [init, userId]);
+  const initialScenario = React.useRef(params.get("scenario"));
+  React.useEffect(() => { if (userId) init("user", userId, initialScenario.current ?? undefined); }, [init, userId]);
   useUserRevalidation();
 
   // Demo command: navigate this user window (outcome / closure steps)
@@ -55,7 +58,7 @@ export default function UserShell() {
   }
 
   const nav: { to: string; label: string; icon: IconName; badge?: number }[] = [
-    { to: `agent/${user.id === "user-a" ? "agent-user-a" : `agent-${user.id}`}`, label: "智能体工作台", icon: "Terminal" },
+    { to: `agent/agent-${user.id}`, label: "智能体工作台", icon: "Terminal" },
     { to: "governance", label: "我的治理规则", icon: "Shield", badge },
     { to: "updates", label: "治理更新", icon: "Bell", badge: staleCount },
     { to: "history", label: "历史记录", icon: "History" },
@@ -100,6 +103,11 @@ export default function UserShell() {
         </nav>
 
         <div className="p-2 border-t border-ink-100 space-y-2">
+          {!collapsed && (
+            <div className="px-1 py-1">
+              <ScenarioSwitcher compact />
+            </div>
+          )}
           <div className={`card p-2.5 !shadow-none ${collapsed ? "text-center" : ""}`}>
             <p className={`text-[10px] uppercase tracking-wider text-ink-500 font-medium ${collapsed ? "hidden" : ""}`}>全局基准版本</p>
             <p className="text-[16px] font-bold text-brand-700 mono leading-none mt-1">{globalVersion}</p>

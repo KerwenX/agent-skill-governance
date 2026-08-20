@@ -1,8 +1,4 @@
-// ============================================================
 // User-side automatic revalidation when a global publish arrives.
-// Finds affected local contracts by scanning dependencies,
-// marks them STALE, then runs revalidation after a short delay.
-// ============================================================
 import React from "react";
 import { useGovernance } from "../store/governance";
 import { findAffectedContracts } from "../engines/dependency";
@@ -22,8 +18,7 @@ export function useUserRevalidation() {
   React.useEffect(() => {
     if (role !== "user" || !userId) return;
     const last = events[events.length - 1];
-    if (!last) return;
-    if (last.eventType !== "GLOBAL_CONTRACT_PUBLISHED") return;
+    if (!last || last.eventType !== "GLOBAL_CONTRACT_PUBLISHED") return;
     if (processed.current.has(last.eventId)) return;
     processed.current.add(last.eventId);
 
@@ -32,32 +27,27 @@ export function useUserRevalidation() {
     const cs = s.changeSets[changeSetId];
     if (!cs) return;
 
-    // Only process locals owned by this user
     const mine = Object.values(localContracts).filter(c => c.ownerId === userId);
     const affected = findAffectedContracts(cs, mine);
 
     (async () => {
-      // 1) mark stale
-      for (const a of affected) {
-        updateLocalContract(a.contract.id, { state: "STALE" });
-      }
-      await orchestrator.wait(500);
+      for (const a of affected) updateLocalContract(a.contract.id, { state: "STALE" });
+      await orchestrator.wait(400);
 
-      // 2) revalidate each
       for (const a of affected) {
         updateLocalContract(a.contract.id, { state: "REVALIDATING" });
-        await orchestrator.wait(700);
-        const result = revalidate(a.contract, Object.values(globalContracts), cs,
-          { taskType: "official_filing", sourceRequirement: "official" });
+        await orchestrator.wait(500);
+        // currentContext: derive from the local contract's own predicates so the
+        // generic revalidation can judge which conditions remain local-specific.
+        const ctx: Record<string, unknown> = {};
+        for (const p of a.contract.predicate) ctx[p.field] = p.value;
+        const result = revalidate(a.contract, Object.values(globalContracts), cs, ctx);
         const newState =
           result.result === "RETIRED" ? "RETIRED"
           : result.result === "ACTIVE_REFINEMENT" ? "ACTIVE_REFINEMENT"
           : "CONFLICT";
-        updateLocalContract(a.contract.id, {
-          state: newState as never,
-          revalidation: result,
-        });
-        await orchestrator.wait(220);
+        updateLocalContract(a.contract.id, { state: newState as never, revalidation: result });
+        await orchestrator.wait(180);
       }
     })();
   }, [events, role, userId, localContracts, globalContracts, updateLocalContract]);

@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import DemoLauncher from "../pages/DemoLauncher";
 import DeveloperShell from "../components/developer/DeveloperShell";
 import DevOverview from "../pages/developer/DevOverview";
@@ -22,6 +22,12 @@ import UserRevalidation from "../pages/user/UserRevalidation";
 import UserConflicts from "../pages/user/UserConflicts";
 import UserHistory from "../pages/user/UserHistory";
 import NotificationCenter from "../components/common/NotificationCenter";
+
+/** Redirects /user/:userId to that user's agent workspace. */
+function UserIndexRedirect() {
+  const { userId } = useParams();
+  return <Navigate to={`agent/agent-${userId}`} replace />;
+}
 
 export default function App() {
   return (
@@ -49,7 +55,7 @@ export default function App() {
 
         {/* User */}
         <Route path="/user/:userId" element={<UserShell />}>
-          <Route index element={<Navigate to="agent/agent-user-a" replace />} />
+          <Route index element={<UserIndexRedirect />} />
           <Route path="agent/:agentId" element={<UserAgentWorkspace />} />
           <Route path="证据/new/:runtimeId" element={<UserEvidenceNew />} />
           <Route path="governance" element={<UserGovernance />} />

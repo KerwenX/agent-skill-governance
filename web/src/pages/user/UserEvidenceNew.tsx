@@ -38,7 +38,9 @@ export default function UserEvidenceNew() {
       }
       await orchestrator.wait(180);
       if (cancelled) return;
-      const ev = createEvidence(runtime, s.globalVersion, true);
+      const profile = runtime.evidenceProfile;
+      if (!profile) { setExtracting(false); return; }
+      const ev = createEvidence(runtime, s.globalVersion, true, profile);
       Object.keys(ev.skillVersions).forEach(sid => { ev.skillVersions[sid] = s.skills[sid]?.version ?? "0.0"; });
       set证据(ev);
       setExtracting(false);

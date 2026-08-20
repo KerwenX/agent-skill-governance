@@ -1,12 +1,10 @@
 // ============================================================
-// Global Governance Store — V4.0 section 168
-// One Zustand store per window; cross-window sync via eventBus.
+// Global Governance Store — one Zustand store per window;
+// cross-window sync via eventBus. Scenario-driven seed state.
 // ============================================================
 import { create } from "zustand";
-import {
-  AGENTS, INITIAL_GLOBAL_CONTRACTS, INITIAL_GLOBAL_VERSION,
-  INITIAL_LOCAL_CONTRACTS, PLATFORM_STATS, SKILLS, USERS,
-} from "../fixtures/base";
+import { getScenario, DEFAULT_SCENARIO_ID } from "../fixtures/scenarios/registry";
+import type { ScenarioConfig } from "../fixtures/scenarios/types";
 import type {
   Agent, EvidenceCluster, GlobalChangeSet, GlobalGovernanceCandidate,
   GovernanceContract, GovernanceEvent, LocalEvidence, NotificationItem,
@@ -17,15 +15,18 @@ import { recomputeClusters } from "../engines/clusterSync";
 
 export type WindowRole = "demo" | "developer" | "user";
 
-interface GovernanceState {
+export interface GovernanceState {
   role: WindowRole;
   userId?: string;
 
-  // Fixture data
+  scenarioId: string;
+  scenario: ScenarioConfig;
+
+  // Fixture data (scenario-scoped)
   skills: Record<string, Skill>;
   users: Record<string, User>;
   agents: Record<string, Agent>;
-  platformStats: typeof PLATFORM_STATS;
+  platformStats: ScenarioConfig["platformStats"];
 
   // Runtime
   globalVersion: string;
@@ -41,10 +42,10 @@ interface GovernanceState {
 
   // Demo / UI
   evidenceInboxCount: number;
-  activeScenarioId: string;
 
   // Reducers
-  init: (role: WindowRole, userId?: string) => void;
+  init: (role: WindowRole, userId?: string, scenarioId?: string) => void;
+  loadScenario: (id: string) => void;
   resetAll: () => void;
   applyEvent: (event: GovernanceEvent) => void;
   emit: (event: GovernanceEvent) => void;
@@ -67,21 +68,26 @@ interface GovernanceState {
   markAllNotificationsRead: () => void;
   bumpInbox: (n?: number) => void;
 
-  setActiveScenario: (id: string) => void;
+  upgradeSkill: (skillId: string, version: string) => void;
+  grantPermissions: (userId: string, permissions: string[]) => void;
+  revokePermissions: (userId: string) => void;
+  sessionPermissions: Record<string, string[]>;
 }
 
 const toMap = <T extends { id: string }>(arr: T[]) =>
   Object.fromEntries(arr.map(x => [x.id, x])) as Record<string, T>;
 
-function initialFixtureState() {
+function seedFor(scenario: ScenarioConfig) {
   return {
-    globalVersion: INITIAL_GLOBAL_VERSION,
-    skills: toMap(SKILLS),
-    users: toMap(USERS),
-    agents: toMap(AGENTS),
-    platformStats: PLATFORM_STATS,
-    globalContracts: toMap(INITIAL_GLOBAL_CONTRACTS),
-    localContracts: toMap(INITIAL_LOCAL_CONTRACTS),
+    scenarioId: scenario.id,
+    scenario,
+    globalVersion: scenario.initialVersion,
+    skills: toMap(scenario.skills),
+    users: toMap(scenario.users),
+    agents: toMap(scenario.agents),
+    platformStats: scenario.platformStats,
+    globalContracts: toMap(scenario.globalContracts),
+    localContracts: toMap(scenario.localContracts),
     evidence: {},
     clusters: {},
     candidates: {},
@@ -89,21 +95,35 @@ function initialFixtureState() {
     runtimes: {},
     events: [],
     notifications: [],
-    evidenceInboxCount: 61,
-    activeScenarioId: "scenario-01",
+    evidenceInboxCount: 0,
+    sessionPermissions: {} as Record<string, string[]>,
   };
 }
 
 export const useGovernance = create<GovernanceState>((set, get) => ({
   role: "demo",
-  ...initialFixtureState(),
+  ...seedFor(getScenario(DEFAULT_SCENARIO_ID)),
 
-  init: (role, userId) => {
-    set({ role, userId, ...initialFixtureState() });
+  init: (role, userId, scenarioId) => {
+    const sc = getScenario(scenarioId);
+    set({ role, userId, ...seedFor(sc) });
+  },
+
+  loadScenario: (id) => {
+    const sc = getScenario(id);
+    set({ ...seedFor(sc) });
+    const evt: GovernanceEvent = {
+      eventId: nextId("evt"), eventType: "SCENARIO_CHANGED",
+      timestamp: Date.now(), sourceDomain: "SYSTEM", sourceId: eventBus.id,
+      targetDomain: "ALL", correlationId: nextId("corr"),
+      globalVersion: sc.initialVersion, payload: { scenarioId: id },
+    };
+    eventBus.publish(evt);
   },
 
   resetAll: () => {
-    set(s => ({ ...s, ...initialFixtureState() }));
+    const sc = get().scenario;
+    set(s => ({ ...s, ...seedFor(sc) }));
     const evt: GovernanceEvent = {
       eventId: nextId("evt"), eventType: "DEMO_RESET",
       timestamp: Date.now(), sourceDomain: "SYSTEM", sourceId: eventBus.id,
@@ -114,56 +134,66 @@ export const useGovernance = create<GovernanceState>((set, get) => ({
   },
 
   emit: (event) => {
-    // applyEvent() records into events log + applies local side-effects.
     get().applyEvent(event);
-    // Broadcast to other windows (local subscription skips events from self).
     eventBus.publish(event);
   },
 
   applyEvent: (event) => {
-    // Central cross-window reducer. Local reducers call this too via emit.
     set(s => ({ events: [...s.events, event].slice(-500) }));
 
     switch (event.eventType) {
+      case "SCENARIO_CHANGED": {
+        const id = (event.payload as { scenarioId: string }).scenarioId;
+        const sc = getScenario(id);
+        set({ ...seedFor(sc) });
+        break;
+      }
+      case "SKILL_UPGRADED": {
+        const { skillId, version } = event.payload as { skillId: string; version: string };
+        set(s => {
+          const sk = s.skills[skillId];
+          if (!sk) return s;
+          return { skills: { ...s.skills, [skillId]: { ...sk, version } } };
+        });
+        break;
+      }
+      case "PERMISSIONS_CHANGED": {
+        const { userId, permissions } = event.payload as { userId: string; permissions: string[] | null };
+        set(s => ({
+          sessionPermissions: permissions
+            ? { ...s.sessionPermissions, [userId]: permissions }
+            : Object.fromEntries(Object.entries(s.sessionPermissions).filter(([k]) => k !== userId)),
+        }));
+        break;
+      }
       case "LOCAL_EVIDENCE_CREATED": {
         const p = event.payload as { evidenceId: string; evidence?: LocalEvidence };
         const ev = p.evidence;
-        if (ev && !get().evidence[ev.id]) {
-          get().addEvidence(ev);
-        }
-        // Developer: synchronous clustering (no stale React-effect closures)
+        if (ev && !get().evidence[ev.id]) get().addEvidence(ev);
         if (get().role === "developer" && ev) {
           get().bumpInbox(1);
           const allEvidence = Object.values(get().evidence);
           const { clusters, result } = recomputeClusters(allEvidence, get().clusters, ev);
-          if (result?.cluster) {
-            get().upsertCluster(result.cluster);
-          }
+          if (result?.cluster) get().upsertCluster(result.cluster);
           if (result?.candidate) {
             get().upsertCandidate(result.candidate);
             get().pushNotification({
-              kind: "success",
-              title: "Promotion Ready",
+              kind: "success", title: "Promotion Ready",
               body: `${result.cluster!.id} reached score ${result.cluster!.promotionScore.toFixed(2)} → ${result.candidate.id}`,
               cta: { label: "Review", to: `/developer/candidates/${result.candidate.id}` },
             });
           }
-          if (ev) {
-            get().pushNotification({
-              kind: "info",
-              title: "New Governance Signal",
-              body: `${ev.id} · ${ev.violationType} · ${ev.userId}`,
-              cta: { label: "Inspect", to: "/developer/inbox" },
-            });
-          }
+          get().pushNotification({
+            kind: "info", title: "New Governance Signal",
+            body: `${ev.id} · ${ev.violationType} · ${ev.userId}`,
+            cta: { label: "Inspect", to: "/developer/inbox" },
+          });
         }
         break;
       }
       case "LOCAL_CONTRACT_CREATED": {
         const p = event.payload as { contract?: GovernanceContract };
-        if (p.contract && !get().localContracts[p.contract.id]) {
-          get().addLocalContract(p.contract);
-        }
+        if (p.contract && !get().localContracts[p.contract.id]) get().addLocalContract(p.contract);
         break;
       }
       case "GLOBAL_CANDIDATE_CREATED":
@@ -179,33 +209,21 @@ export const useGovernance = create<GovernanceState>((set, get) => ({
         if (p.globalContract) get().addGlobalContract(p.globalContract);
         break;
       }
-      case "DEPENDENCY_SCAN_STARTED":
-      case "LOCAL_CONTRACT_AFFECTED":
-      case "REVALIDATION_STARTED": {
-        // These are presentation cues; business state is handled via MARKED_STALE / result events.
-        break;
-      }
       case "GLOBAL_CONTRACT_PUBLISHED": {
         const csId = (event.payload as { changeSetId: string }).changeSetId;
         const cs = get().changeSets[csId];
         if (cs) {
           set({ globalVersion: cs.toVersion });
-          // Mark affected STALE, then apply computed revalidation outcomes.
           for (const id of cs.affectedContractIds) {
-            if (get().localContracts[id]) {
-              get().updateLocalContract(id, { state: "STALE" });
-            }
+            if (get().localContracts[id]) get().updateLocalContract(id, { state: "STALE" });
           }
           if (cs.revalidation) {
-            for (const id of cs.revalidation.retired) {
+            for (const id of cs.revalidation.retired)
               if (get().localContracts[id]) get().updateLocalContract(id, { state: "RETIRED" });
-            }
-            for (const id of cs.revalidation.refined) {
+            for (const id of cs.revalidation.refined)
               if (get().localContracts[id]) get().updateLocalContract(id, { state: "ACTIVE_REFINEMENT" });
-            }
-            for (const id of cs.revalidation.conflicted) {
+            for (const id of cs.revalidation.conflicted)
               if (get().localContracts[id]) get().updateLocalContract(id, { state: "CONFLICT" });
-            }
           }
           get().pushNotification({
             kind: "success",
@@ -214,7 +232,7 @@ export const useGovernance = create<GovernanceState>((set, get) => ({
             cta: { label: get().role === "developer" ? "Monitor" : "Review",
                    to: get().role === "developer"
                      ? `/developer/propagation/${cs.id}`
-                     : `/${get().userId ? `user/${get().userId}` : "demo"}/updates` },
+                     : `/user/${get().userId ?? "user-a"}/updates` },
           });
         }
         break;
@@ -223,18 +241,14 @@ export const useGovernance = create<GovernanceState>((set, get) => ({
       case "LOCAL_CONTRACT_RETIRED":
       case "LOCAL_CONTRACT_REFINED":
       case "LOCAL_CONTRACT_CONFLICTED": {
-        const p = event.payload as { contractId: string; state?: string };
+        const p = event.payload as { contractId: string };
         if (p.contractId && get().localContracts[p.contractId]) {
-          const stateMap: Record<string, string> = {
-            LOCAL_CONTRACT_MARKED_STALE: "STALE",
-            LOCAL_CONTRACT_RETIRED: "RETIRED",
-            LOCAL_CONTRACT_REFINED: "ACTIVE_REFINEMENT",
-            LOCAL_CONTRACT_CONFLICTED: "CONFLICT",
+          const map: Record<string, string> = {
+            LOCAL_CONTRACT_MARKED_STALE: "STALE", LOCAL_CONTRACT_RETIRED: "RETIRED",
+            LOCAL_CONTRACT_REFINED: "ACTIVE_REFINEMENT", LOCAL_CONTRACT_CONFLICTED: "CONFLICT",
           };
-          const nextState = stateMap[event.eventType];
-          if (nextState) {
-            get().updateLocalContract(p.contractId, { state: nextState as never });
-          }
+          const next = map[event.eventType];
+          if (next) get().updateLocalContract(p.contractId, { state: next as never });
         }
         break;
       }
@@ -245,8 +259,7 @@ export const useGovernance = create<GovernanceState>((set, get) => ({
   addRuntime: (rt) => set(s => ({ runtimes: { ...s.runtimes, [rt.id]: rt } })),
   updateRuntime: (id, patch) =>
     set(s => {
-      const prev = s.runtimes[id];
-      if (!prev) return s;
+      const prev = s.runtimes[id]; if (!prev) return s;
       return { runtimes: { ...s.runtimes, [id]: { ...prev, ...patch } } };
     }),
 
@@ -257,49 +270,60 @@ export const useGovernance = create<GovernanceState>((set, get) => ({
       return { evidence: { ...s.evidence, [id]: { ...prev, ...patch } } };
     }),
 
-  addLocalContract: (c) =>
-    set(s => ({ localContracts: { ...s.localContracts, [c.id]: c } })),
+  addLocalContract: (c) => set(s => ({ localContracts: { ...s.localContracts, [c.id]: c } })),
   updateLocalContract: (id, patch) =>
     set(s => {
       const prev = s.localContracts[id]; if (!prev) return s;
       return { localContracts: { ...s.localContracts, [id]: { ...prev, ...patch, updatedAt: Date.now() } } };
     }),
-  addGlobalContract: (c) =>
-    set(s => ({ globalContracts: { ...s.globalContracts, [c.id]: c } })),
+  addGlobalContract: (c) => set(s => ({ globalContracts: { ...s.globalContracts, [c.id]: c } })),
 
-  upsertCluster: (c) =>
-    set(s => ({ clusters: { ...s.clusters, [c.id]: c } })),
-  upsertCandidate: (c) =>
-    set(s => ({ candidates: { ...s.candidates, [c.id]: c } })),
-  addChangeSet: (c) =>
-    set(s => ({ changeSets: { ...s.changeSets, [c.id]: c } })),
+  upsertCluster: (c) => set(s => ({ clusters: { ...s.clusters, [c.id]: c } })),
+  upsertCandidate: (c) => set(s => ({ candidates: { ...s.candidates, [c.id]: c } })),
+  addChangeSet: (c) => set(s => ({ changeSets: { ...s.changeSets, [c.id]: c } })),
 
   pushNotification: (n) =>
-    set(s => ({
-      notifications: [
-        { ...n, id: nextId("ntf"), createdAt: Date.now() },
-        ...s.notifications,
-      ].slice(0, 30),
-    })),
-  markAllNotificationsRead: () =>
-    set(s => ({ notifications: s.notifications.map(n => ({ ...n, read: true })) })),
-
+    set(s => ({ notifications: [{ ...n, id: nextId("ntf"), createdAt: Date.now() }, ...s.notifications].slice(0, 30) })),
+  markAllNotificationsRead: () => set(s => ({ notifications: s.notifications.map(n => ({ ...n, read: true })) })),
   bumpInbox: (n = 1) => set(s => ({ evidenceInboxCount: s.evidenceInboxCount + n })),
 
-  setActiveScenario: (id) => set({ activeScenarioId: id }),
+  upgradeSkill: (skillId, version) => {
+    const s = get();
+    const sk = s.skills[skillId]; if (!sk) return;
+    set({ skills: { ...s.skills, [skillId]: { ...sk, version } } });
+    s.emit({
+      eventId: nextId("evt"), eventType: "SKILL_UPGRADED",
+      timestamp: Date.now(), sourceDomain: "DEVELOPER", sourceId: eventBus.id,
+      targetDomain: "ALL", correlationId: nextId("corr"),
+      globalVersion: s.globalVersion, payload: { skillId, version },
+    });
+  },
+  grantPermissions: (userId, permissions) => {
+    const s = get();
+    set({ sessionPermissions: { ...s.sessionPermissions, [userId]: permissions } });
+    s.emit({
+      eventId: nextId("evt"), eventType: "PERMISSIONS_CHANGED",
+      timestamp: Date.now(), sourceDomain: "USER", sourceId: eventBus.id,
+      targetDomain: "ALL", correlationId: nextId("corr"),
+      globalVersion: s.globalVersion, payload: { userId, permissions },
+    });
+  },
+  revokePermissions: (userId) => {
+    const s = get();
+    set({ sessionPermissions: Object.fromEntries(Object.entries(s.sessionPermissions).filter(([k]) => k !== userId)) });
+    s.emit({
+      eventId: nextId("evt"), eventType: "PERMISSIONS_CHANGED",
+      timestamp: Date.now(), sourceDomain: "USER", sourceId: eventBus.id,
+      targetDomain: "ALL", correlationId: nextId("corr"),
+      globalVersion: s.globalVersion, payload: { userId, permissions: null },
+    });
+  },
 }));
 
-// Subscribe once to cross-window events and route them through reducer.
 if (typeof window !== "undefined") {
   eventBus.subscribe((event) => {
-    // Skip events this window itself emitted (already applied through emit)
     if (event.sourceId === eventBus.id) return;
     useGovernance.getState().applyEvent(event);
   });
-  // E2E / debug access
-  (window as unknown as { __skillos?: unknown }).__skillos = {
-    store: useGovernance,
-    eventBus,
-    nextId,
-  };
+  (window as unknown as { __skillos?: unknown }).__skillos = { store: useGovernance, eventBus, nextId };
 }
